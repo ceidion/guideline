@@ -6,8 +6,9 @@
 .. only:: html
 
  .. contents:: 目次
-    :depth: 3
     :local:
+
+.. _UnitTestOverview:
 
 Overview ★節追加
 --------------------------------------------------------------------------------
@@ -31,28 +32,28 @@ Overview ★節追加
       - spring-test
       - DB操作にSpring JDBCを使用する場合
     * - 
-      - spring-testとDbUnit
-      - DB操作にDbUnitを使用する場合
+      - spring-test + DBUnit
+      - DB操作にDBUnitを使用する場合
     * - Service
       - spring-test
       - モックを使用しない場合
     * - 
-      - JunitとMocito
+      - Junit + Mocito
       - モックを使用する場合
     * - Controller
-      - spring-test+MockMVC+Mockito
+      - spring-test + MockMVC + Mockito
       - モックを使用する場合
     * - Helper
       - spring-test
       - DB操作にSpring JDBCを使用する場合
     * - 
-      - spring-testとDbUnit
-      - DB操作にDbUnitを使用する場合
+      - spring-test + DBUnit
+      - DB操作にDBUnitを使用する場合
     * - Validation
-      - ???
+      - JUnit
       - Bean Validationの場合
     * - 
-      - ???
+      - JUnit
       - Spring Validationの場合
 
 |
@@ -82,28 +83,28 @@ OSSのバージョン★
       - 4.3.5.RELEASE
       - \*
       -
-    * - Spring
-      - org.springframework
-      - spring-test
-      - 4.3.5.RELEASE
+    * - SpringDBUnit
+      - com.github.springtestdbunit
+      - spring-test-dbunit
+      - 1.3.0
       - \*
       -
-    * - Spring
-      - org.springframework
-      - spring-test
-      - 4.3.5.RELEASE
+    * - DBUnit
+      - org.dbunit
+      - dbunit
+      - 2.5.4
       - \*
       -
-    * - Spring
+    * - Mockito
       - org.mockito
       - mockito-core
-      - 4.3.5.RELEASE
+      - 1.10.19
       - \*
       -
-    * - Spring
-      - org.springframework
-      - spring-test
-      - 4.3.5.RELEASE
+    * - JUnit
+      - junit
+      - junit
+      - 4.12
       - \*
       -
 
@@ -112,7 +113,7 @@ OSSのバージョン★
 ライブラリの設定
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-単体試験用のライブラリを\ ``pom.xml``\ の\ ``dependency``\ に追加を行う。以下に追加するライブラリを示す。
+単体テスト用のライブラリを\ ``pom.xml``\ の\ ``dependency``\ に追加を行う。以下に追加するライブラリを示す。
 
 * ``pom.xml``
 
@@ -131,8 +132,8 @@ OSSのバージョン★
     </dependency>
     <!-- (X) -->
     <dependency>
-      <groupId>org.DbUnit</groupId>
-      <artifactId>DbUnit</artifactId>
+      <groupId>org.DBUnit</groupId>
+      <artifactId>DBUnit</artifactId>
       <version>2.X.X</version>
       <scope>test</scope>
     </dependency>
@@ -156,14 +157,19 @@ OSSのバージョン★
 
 |
 
+.. _UnitTestOfInfrastructureLayer:
+
 インフラストラクチャ層の単体テスト
 --------------------------------------------------------------------------------
+
+インフラストラクチャ層のテスト全体観点
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ここでは、インフラストラクチャ層の単体テストについて説明する。
 インフラストラクチャ層の詳細については、開発ガイドラインの\ :ref:`LayerOfInfrastructure`\を参照されたい。
 
 DBとのアクセス部分がインフラストラクチャ層のテストスコープとなる。
-本節は、インフラストラクチャ層の\ ``Repository``\ クラスに対するテストクラスの作成例を示す。
+本節は、インフラストラクチャ層の\ ``Repository``\ クラスに対するテストの作成例を示す。
 
 なお、Macchinetta Server Framework 適用システムで、MyBatis3を使用して\ ``Repository``\ を実装している場合、
 \ ``RepositoryImpl``\ はMapperインタフェース（\ ``Repository``\）とマッピングファイルから自動生成される。
@@ -189,10 +195,10 @@ Repositoryの単体テスト
       - 使い分けの方針
     * - spring-test
       - 基本??
-      - DbUnitが使用できない場合（Spring JDBCを使用する場合）
-    * - spring-test+DbUnit
+      - DBUnitが使用できない場合（Spring JDBCを使用する場合）
+    * - spring-test+DBUnit
       - 基本??
-      - DbUnitを使用できる場合
+      - DBUnitを使用できる場合
 
 
 Macchinetta Server Framework 適用システムで、MyBatis3を使用して\ ``Repository``\ を実装している場合、
@@ -203,19 +209,18 @@ MyBatis3によりMapperインタフェース（\ ``Repository``\）とマッピ�
 詳細は、\ :ref:`repository-mybatis3-label`\ を参照されたい。
 
 
-spring-testを使用した試験 ★節名を変更?(Spring JDBCのほうがよい？)
+spring-testを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Repositoryの単体テストは、JUnitを使用して実施する。
-プロジェクト要件などでDbUnitが使用できない場合、\ ``org.springframework.jdbc.core.JdbcTemplate``\ を用いて
+プロジェクト要件などでDBUnitが使用できない場合、\ ``org.springframework.jdbc.core.JdbcTemplate``\ を用いて
 データアクセスを行う。
 また、Repositoryの単体テストを行う際は単体テスト用の設定ファイルを用意すること。
 
 作成するファイル例を以下に示す。
-
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
@@ -342,10 +347,9 @@ spring-testを使用するための設定
       - | \ ``<tx:annotation-driven>``\ を追加することで、\ ``@Transactional``\ アノテーションを使った
           トランザクション境界の指定が有効となる。
     * - | (8)
-      - | \ ``jp.co.ntt.atrs.domain.repository``\ パッケージ配下をcomponent-scan対象にする。
-        | これにより、\ ``jp.co.ntt.atrs.domain.repository``\ パッケージ配下のクラスに@Repositoryアノテーションを
-          付けることで、DI対象にできる。
+      - | \ ``jp.co.ntt.atrs.domain.repository``\ パッケージ配下をcomponent-scan対象とする。
 
+.. _ImplementOfRepositoryTest:
 
 Repositoryテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -597,21 +601,21 @@ Repositoryの単体テストクラスの作成方法を説明する。
           \ ``MemberLogin``\ クラス）にマッピングすることができる。
 
 
-spring-testとDbUnitを使用した試験
+spring-testとDBUnitを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-データアクセスにDbUnitを使用する場合のRepositoryの単体テスト実装方法について説明する。
+データアクセスにDBUnitを使用する場合のRepositoryの単体テスト実装方法について説明する。
 
-DbUnitとは、データベースに依存するクラスのテストを行うためのJUnit拡張フレームワークである。
-以下のような機能を利用することで試験工数を削減できるため、基本的にはDbUnitを用いて実装することを推奨する。
+DBUnitとは、データベースに依存するクラスのテストを行うためのJUnit拡張フレームワークである。
+以下のような機能を利用することで試験工数を削減できるため、基本的にはDBUnitを用いて実装することを推奨する。
 
  * 事前のテストデータのセットアップ機能
  * テスト実施後の期待結果データとの比較によるデータベースの状態の検証機能
 
-DbUnitを利用したRepositoryの単体テストにおいて、作成するファイルを以下に示す。
+DBUnitを利用したRepositoryの単体テストにおいて、作成するファイルを以下に示す。
 
 .. figure:: ./images/UnitTest_project_configuration_dbunit.png
    :width: 95%
@@ -642,7 +646,7 @@ DbUnitを利用したRepositoryの単体テストにおいて、作成するフ�
 
 .. _TestGuideSettingOfDbUnit:
 
-DbUnitを使用するための設定
+DBUnitを使用するための設定
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 RepositoryのDBUnitを利用した単体テストのための設定ファイルとして \ ``test-context-dbunit.xml``\ を作成する。
@@ -667,7 +671,7 @@ RepositoryのDBUnitを利用した単体テストのための設定ファイル�
       - 説明
     * - | (1)
       - | データソースのクラスを\ ``TransactionAwareDataSourceProxy``\ のbeanにすることで、
-           DbUnitをSpringのトランザクション管理下にすることができる。
+           DBUnitをSpringのトランザクション管理下にすることができる。
 
 
 Repositoryテストの実装(DBUnitと連携する場合)
@@ -912,8 +916,13 @@ Repositoryテストの実装(DBUnitと連携する場合)
 
 |
 
+.. _UnitTestOfDomainLayer:
+
 ドメイン層の単体テスト
 --------------------------------------------------------------------------------
+
+ドメイン層のテスト全体観点
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ここでは、ドメイン層の単体テストについて説明する。
 ドメイン層の詳細については、開発ガイドラインの\ :ref:`LayerOfDomain`\ を参照されたい。
@@ -942,15 +951,23 @@ Serviceの単体テスト
       - 使い分けの方針
     * - spring-test
       - 基本??
-      - モックが必要ない場合
+      - 依存クラスがテスト済みでモック化する必要がない場合
     * - Junit + Mockito
       - 基本??
-      - モックが必要な場合
+      - モック化が必要な場合
 
-参考ガイドライン
-　4.1.1 概要の文章
+Serviceの単体テストについては、JUnitを使用して\ ``Service``\ クラスの実装クラス（\ ``ServiceImpl``\）に対して
+試験を実施する。テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスを
+インジェクションしている場合はモックを作成すること。
+モックの作成方法については、\ :ref:`TestingServiceWithSpringTest`\ を参照されたい。
 
-・一部モックを使うのであれば、合わせて読むことを記載"
+なお、インジェクションするクラスにモッククラスを別途用意してもよい。
+モッククラスの作成方法については、本ガイドラインでは説明を割愛する。
+
+モッククラスを作成せず、モック用ライブラリを使用する方法については、\ :ref:`TestingServiceWithMockito`\を
+参照されたい。
+
+.. _TestingServiceWithSpringTest:
 
 spring-testを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -958,30 +975,31 @@ spring-testを使用した試験
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+・フォルダ構成の図
 
-"・フォルダ構成の図
-参考ガイドライン
-　4.1.1. 概要　をベースにする。
+テスト済みの\ ``Repository``\ クラスを使用する場合、DBUnitを使用して\ ``Repository``\ クラスをインジェクションして
+テスト対象の\ ``ServiceImpl``\ クラスのテスト作成方法を説明する。
 
-・作成するファイル名、その説明
-参考ガイドライン
-　4.1.1. 概要　をベースにする。
+作成するファイルを以下に示す。
 
-・RepositoryImpl実コードを使用した試験"
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 30 70
 
+    * - 作成するファイル名
+      - 説明
+    * - XxxServiceImplTest.java
+      - XxxServiceImpl.javaのテストクラス
+    * - MessageSourceMock.java
+      - Serviceの単体試験を行う際に使用するMessageSourceのモッククラス。
 
 Serviceテストの実装(DBUnitと連携する場合)
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-"・Serviceテストクラスの作成
-　参考ガイドライン
-　4.1.4. Serviceのテストクラス作成
-　をベースにする。
+Repositoryをインジェクションしてテストする方法は\ :ref:`ImplementOfRepositoryTest`\ を参照されたい。
 
-・参考ガイドラインでは、ソースと説明がそれぞれの項目で記載されているが、
-ひとつのソースで説明を行うようにする。"
-
-
+.. _TestingServiceWithMockito:
 
 JunitとMocitoを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -989,31 +1007,42 @@ JunitとMocitoを使用した試験
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-"・フォルダ構成の図
-参考ガイドライン
-　4.1.1. 概要　をベースにする。
+・フォルダ構成の図
 
-・作成するファイル名、その説明
-参考ガイドライン
-　4.1.1. 概要　をベースにする。
-"
+\ ``Repository``\ クラスなど\ ``ServiceImpl``\ クラスが依存するクラスをモック化する場合のテスト作成方法を説明する。
 
-Serviceテストの実装(DBUnitと連携する場合)
+作成するファイルを以下に示す。
+
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 30 70
+
+    * - 作成するファイル名
+      - 説明
+    * - XxxServiceTest.java
+      - XxxService.javaのテストクラス
+    * - XxxMock.java
+      - Serviceの単体試験を行う際に使用するXxxのモッククラス。
+
+.. _ImplementOfServiceTest:
+
+Serviceテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-"・Serviceテストクラスの作成
-　参考ガイドライン
-　4.1.3. モッククラスの作成方法（Mockito）
-　4.1.4. Serviceのテストクラス作成
-　をベースにする。
+・モッククラスの作成方法（Mockito）
 
-・参考ガイドラインでは、ソースと説明がそれぞれの項目で記載されているが、
-ひとつのソースで説明を行うようにする。"
+・Serviceのテストクラス作成
 
 |
 
+.. _UnitTestOfAplicationLayer:
+
 アプリケーション層の単体テスト
 --------------------------------------------------------------------------------
+
+アプリケーション層のテスト全体観点
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ここでは、アプリケーション層の単体テストについて説明する。
 アプリケーション層の詳細については、開発ガイドラインの\ :ref:`LayerOfApplication`\ を参照されたい。
@@ -1033,22 +1062,9 @@ Serviceテストの実装(DBUnitと連携する場合)
 Controllerの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
-.. list-table::
-    :header-rows: 1
-    :widths: 40 20 40
-
-    * - テストパターン
-      - 特徴
-      - 使い分けの方針
-    * - spring-test + MockMVC + Mockito
-      - 基本??
-      - 通常？
-
-SpringはControllerクラスを試験するためのサポートクラス(MockMvcBuildersなど)を用意している。
-これらのクラスを利用することでJUnitからControllerクラスのメソッドを実行して試験をすることができる。
-ControllerがインジェクションしているServiceクラスはモッククラスを用意する。
-
+Springは\ ``Controller``\ クラスを試験するためのサポートクラス
+(\ ``org.springframework.test.web.servlet.setup.MockMvcBuilders``\ など)を用意している。
+これらのクラスを利用することでJUnitから\ ``Controller``\ クラスのメソッドを実行して試験をすることができる。
 
 spring-test + MockMVC + Mockitoを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1056,9 +1072,8 @@ spring-test + MockMVC + Mockitoを使用した試験
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-SpringはControllerクラスを試験するためのサポートクラス(MockMvcBuildersなど)を用意している。
-これらのクラスを利用することでJUnitからControllerクラスのメソッドを実行して試験をすることができる。
-ControllerがインジェクションしているServiceクラスはモッククラスを用意する。
+\ ``Controller``\ がインジェクションしている\ ``Service``\ クラスはモック用ライブラリを使用する。
+Serviceクラスがテスト済みの場合は、テスト済みのServiceクラスを使用する。
 
 作成するファイルを以下に示す。
 
@@ -1077,7 +1092,9 @@ ControllerがインジェクションしているServiceクラスはモックク
 Controllerテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Controllerの単体テストクラスの作成方法を説明する。
+Serviceのモッククラスの作成方法については、\ :ref:`ImplementOfServiceTest`\ を参照されたい。
+
+ここでは、Controllerの単体テストクラスの作成方法を説明する。
 
 * ``MemberRegisterControllerTest.java``
 
@@ -1102,6 +1119,55 @@ Controllerの単体テストクラスの作成方法を説明する。
             // 試験対象コントローラからMockMvcを生成する。
             this.mockMvc = MockMvcBuilders.standaloneSetup(target).build();
         }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | 
+
+
+* ``MemberRegisterControllerTest.java``
+
+.. code-block:: java
+
+    package jp.co.ntt.atrs.app.c1;
+
+    @Test
+    public void testRegisterForm() throws Exception {
+        // Modelに格納するデータ
+        String birthMinDate = "BirthMinDate";
+        String birthMaxDate = "BirthMinDate";
+        
+        // Helperの動作を設定
+        when(memberHelper.getDateOfBirthMinDate()).thenReturn(birthMinDate);
+        when(memberHelper.getDateOfBirthMaxDate()).thenReturn(birthMaxDate);
+
+        // テストを実行し、HTTPステータスコード、遷移先JSPパス、Modelの妥当性を検証
+        ResultActions results = mockMvc.perform(
+                MockMvcRequestBuilders.get("/member/register")
+                .param("form", "form"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("C1/memberRegisterForm"))
+                .andExpect(model().attributeHasNoErrors(memberRegisterFormName));
+
+        // Modelにオブジェクトが格納されていることを確認する。
+        results.andExpect(model().attribute(birthMinDateObjectName, isA(String.class)));
+        results.andExpect(model().attribute(birthMaxDateObjectName, isA(String.class)));
+
+        // Modelに格納されたオブジェクトを取得し確認する。
+        ModelAndView mav = results.andReturn().getModelAndView();
+        String actualDateOfBirthMinDate = (String) mav.getModel().get(
+                birthMinDateObjectName);
+        String actualDateOfBirthMaxDate = (String) mav.getModel().get(
+                birthMaxDateObjectName);
+        assertThat(actualDateOfBirthMinDate, equalTo(birthMinDate));
+        assertThat(actualDateOfBirthMaxDate, equalTo(birthMaxDate));
+    }
 
 .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
 .. list-table::
@@ -1169,58 +1235,51 @@ Controllerの単体テストクラスの作成方法を説明する。
 
 |
 
-
-　5.5.4. Controllerのテストメソッド作成
-　をベースにする。
-
-・参考ガイドラインでは、ソースと説明がそれぞれの項目で記載されているが、ひとつのソースで説明を行うようにする。"
-
-
 .. note:: **Sessionを利用する場合**
 
-ControllerクラスがSessionを利用している場合は\ ``org.springframework.mock.web.MockHttpSession``\ を使って試験を行う。
+    ControllerクラスがSessionを利用している場合は\ ``org.springframework.mock.web.MockHttpSession``\ を使って試験を行う。
 
-* \ ``MockHttpSession``\ を利用したテストメソッドの例
+    * \ ``MockHttpSession``\ を利用したテストメソッドの例
 
-     .. code-block:: java
+         .. code-block:: java
 
-        @Test
-        public void testSession() throws Exception {
+            @Test
+            public void testSession() throws Exception {
 
-            // (1)
-            MockHttpSession mockSession = new MockHttpSession();
+                // (1)
+                MockHttpSession mockSession = new MockHttpSession();
 
-            // (2)
-            mockSession.setAttribute("userId", "0001");
+                // (2)
+                mockSession.setAttribute("userId", "0001");
 
-            // (3)
-            MockHttpServletRequestBuilder getRequest = MockMvcRequestBuilders.get(
-                "/checkSession").session(mockSession);
+                // (3)
+                MockHttpServletRequestBuilder getRequest = MockMvcRequestBuilders.get(
+                    "/checkSession").session(mockSession);
 
-            ResultActions results = mockMvc.perform(getRequest); // (4)
+                ResultActions results = mockMvc.perform(getRequest); // (4)
 
-            // omitted
-        }
+                // omitted
+            }
 
-     .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
-     .. list-table::
-         :header-rows: 1
-         :widths: 10 90
+         .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+         .. list-table::
+             :header-rows: 1
+             :widths: 10 90
 
-         * - 項番
-           - 説明
-         * - | (1)
-           - | セッションのモックを生成する。
-         * - | (2)
-           - | セッションにオブジェクトを格納する。
-         * - | (3)
-           - | セッションを登録したリクエストのモックを生成する。
-             | \ ``org.springframework.test.web.servlet.request.MockMvcRequestBuilders``\ の\ ``get``\ メソッドで
-               リクエストのモックを生成し、生成したリクエストに\ ``session``\ メソッドでセッションのモックを登録する。
-               例では\ ``/checkSession``\へのGETリクエストにセッションのモックを登録している。
-         * - | (4)
-           - | \ ``MockMvc``\ にリクエストを渡してコントローラのメソッドを実行する。
-               結果の確認方法は\ ``@AuthenticationPrincipal``\ アノテーションを利用している場合を参照。 
+             * - 項番
+               - 説明
+             * - | (1)
+               - | セッションのモックを生成する。
+             * - | (2)
+               - | (1)で生成したモックセッションにオブジェクトを格納する。
+             * - | (3)
+               - | セッションを登録したリクエストのモックを生成する。
+                 | \ ``org.springframework.test.web.servlet.request.MockMvcRequestBuilders``\ の\ ``get``\ メソッドで
+                   リクエストのモックを生成し、生成したリクエストに\ ``session``\ メソッドでセッションのモックを登録する。
+                   例では\ ``/checkSession``\へのGETリクエストにセッションのモックを登録している。
+             * - | (4)
+               - | \ ``MockMvc``\ にリクエストを渡してコントローラのメソッドを実行する。
+                   結果の確認方法は\ ``@AuthenticationPrincipal``\ アノテーションを利用している場合を参照。 
 
 |
 
@@ -1239,7 +1298,7 @@ Helperの単体テスト
       - 基本??
       - 
 
-Helperの単体試験で、特別に意識すべきことはない。通常のPOJO(Plain Old Java Object)と同様にJUnitによる
+Helperの単体テストで、特別に意識すべきことはない。通常のPOJO(Plain Old Java Object)と同様にJUnitによる
 単体テストを実施する。
 
 テスト実装例
@@ -1252,8 +1311,17 @@ Helperの単体試験で、特別に意識すべきことはない。通常のPO
 Validatorの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-テストパターンの特徴について記載
+.. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 40 60
 
+    * - テストパターン
+      - 特徴
+    * - BeanValidation
+      - カスタムバリデーションのテスト
+    * - SpringValidation
+      - 相関項目チェックのテスト
 
 JUnitを使用した試験（Bean Validation）
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1261,25 +1329,76 @@ JUnitを使用した試験（Bean Validation）
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-"・フォルダ構成の図
-参考ガイドライン
-　5.3.1　概要　をベースにする。
-・作成するファイル名、その説明
-参考ガイドライン
-　5.3.1　概要　をベースにする。"
+Validator(Bean Validation)の単体テストについては、JUnitを使用して試験を実施する。
+カスタムバリデーションの試験を行う。HibernateValidatorが用意する入力チェックのアノテーションについては
+フレームワーク側で担保しているので、単体テストを行う必要はない。
 
+作成するファイルを以下に示す。
 
-Validatorテストの実装
+・フォルダ構成の図
+
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 30 70
+
+    * - 作成するファイル名
+      - 説明
+    * - HalfWidthNumberTest.java
+      - HalfWidthNumber.javaのテストクラス
+
+Validator(Bean Validation)テストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-"・Validatorテストクラスの作成
-　参考ガイドライン
-　5.3.2. Validator(Bean Validation)のテストクラス作成
-　5.3.3. Validator(Bean Validation)のテストメソッド作成
-　をベースにする。
+Validator(Bean Validation)のテストクラスとして、\ ``HalfWidthNumberTest``\ を作成する。
 
-・参考ガイドラインでは、ソースと説明がそれぞれの項目で記載されているが、
-ひとつのソースで説明を行うようにする。"
+* ``HalfWidthNumberTest.java``
+
+.. code-block:: java
+
+    public class HalfWidthNumberTest {
+
+        private static Validator validator;
+
+        @BeforeClass
+        public static void setUpBeforeClass() throws Exception {
+            ValidatorFactory validatorFacotry = Validation
+                    .buildDefaultValidatorFactory();
+            validator = validatorFacotry.getValidator();
+        }
+
+        @Test
+        public void testValidate01() {
+
+            String membershipNumber = "0123456789";
+
+            PassengerForm form = new PassengerForm();
+
+            // ダミー情報を設定
+            form.setFamilyName("ミョウジ");
+            form.setGivenName("ナマエ");
+            form.setAge(20);
+            form.setGender(Gender.F);
+            // テスト対象のフィールドに正常値をセット
+            form.setMembershipNumber(membershipNumber);
+
+            Set<ConstraintViolation<PassengerForm>> violations = validator.validate(
+                    form);
+
+            // エラーがないことを確認
+            assertEquals(violations.size(), (0));
+        }
+
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | 
 
 JUnitを使用した試験（Spring Validation）
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1287,23 +1406,62 @@ JUnitを使用した試験（Spring Validation）
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-"・フォルダ構成の図
-参考ガイドライン
-　5.4.1　概要　をベースにする。
-・作成するファイル名、その説明
-参考ガイドライン
-　5.4.1　概要　をベースにする。"
+Validator(Spring Validation)の単体テストについては、JUnitを使用して試験を実施する。
+相関項目チェックの試験を行う。
 
+作成するファイルを以下に示す。
 
-Validatorテストの実装
+・フォルダ構成の図
+
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 30 70
+
+    * - 作成するファイル名
+      - 説明
+    * - ReservationFlightValidatorTest.java
+      - ReservationFlightValidator.javaのテストクラス
+
+Validator(Spring Validation)テストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-"・Controllerテストクラスの作成
-　参考ガイドライン
-　5.4.2. Validator(Spring Validation)のテストクラス作成
-　5.4.3. Validator(Spring Validation)のテストメソッド作成
-　をベースにする。
+Validator(Bean Validation)のテストクラスとして、\ ``ReservationFlightValidatorTest.java``\ を作成する。
 
-・参考ガイドラインでは、ソースと説明がそれぞれの項目で記載されているが、
-ひとつのソースで説明を行うようにする。"
+* ``ReservationFlightValidatorTest.java``
+
+.. code-block:: java
+
+    public class ReservationFlightValidatorTest {
+
+        private ReservationFlightValidator target;
+
+        private ReservationFlightForm reservationFlightForm;
+
+        private BindingResult result;
+
+        @Before
+        public void setUp() throws Exception {
+            MockitoAnnotations.initMocks(this);
+
+            target = new ReservationFlightValidator();
+            reservationFlightForm = new ReservationFlightForm();
+            result = new DirectFieldBindingResult(reservationFlightForm, "reservationFlightForm");
+        }
+
+        @Test
+        public void testValidate04() {
+
+            // ダミー情報を設定
+            reservationFlightForm.setFlightType(FlightType.OW);
+            reservationFlightForm.setSelectFlightFormList(
+                    getSelectFlightFormList());
+
+            // バリデータの実行
+            target.validate(reservationFlightForm, result);
+
+            // エラーがないことを確認
+            assertEquals(result.hasErrors(), false);
+        }
+    }
 
