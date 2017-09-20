@@ -10,7 +10,7 @@
 
 .. _UnitTestOverview:
 
-Overview ★節追加
+Overview
 --------------------------------------------------------------------------------
 
 本節の実装例として記載しているサンプル及び、OSSライブラリ構成は一例である。
@@ -23,22 +23,22 @@ Overview ★節追加
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 15 25 60
+    :widths: 15 35 50
 
     * - 試験対象
       - 試験方法
       - 詳細
     * - Repository
       - spring-test
-      - DB操作にSpring JDBCを使用する場合
+      - DB操作にSpring JDBCを使用する。
     * - 
       - spring-test + DBUnit
-      - DB操作にDBUnitを使用する場合
+      - DB操作にDBUnitを使用する。
     * - Service
       - spring-test
-      - モックを使用しない場合
+      - テスト済みのRepositoryを使用する。トランザクション境界の確認する。
     * - 
-      - Junit + Mocito
+      - Junit + Mockito
       - モックを使用する場合
     * - Controller
       - spring-test + MockMVC + Mockito
@@ -64,7 +64,8 @@ Overview ★節追加
 OSSのバージョン★
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-本節で利用するOSS一覧を以下に示す。
+単体テストで利用するOSS一覧を以下に示す。
+サンプルを動作させるために利用するOSS一覧については、\ :ref:`frameworkstack_using_oss_version`\ を参照されたい。
 
 .. tabularcolumns:: |p{0.15\linewidth}|p{0.27\linewidth}|p{0.25\linewidth}|p{0.15\linewidth}|p{0.05\linewidth}|p{0.08\linewidth}|
 .. list-table::
@@ -83,18 +84,6 @@ OSSのバージョン★
       - 4.3.5.RELEASE
       - \*
       -
-    * - SpringDBUnit
-      - com.github.springtestdbunit
-      - spring-test-dbunit
-      - 1.3.0
-      - \*
-      -
-    * - DBUnit
-      - org.dbunit
-      - dbunit
-      - 2.5.4
-      - \*
-      -
     * - Mockito
       - org.mockito
       - mockito-core
@@ -106,6 +95,18 @@ OSSのバージョン★
       - junit
       - 4.12
       - \*
+      -
+    * - SpringDBUnit
+      - com.github.springtestdbunit
+      - spring-test-dbunit
+      - 1.3.0
+      - \
+      -
+    * - DBUnit
+      - org.dbunit
+      - dbunit
+      - 2.5.4
+      - \
       -
 
 |
@@ -154,8 +155,126 @@ OSSのバージョン★
     </dependency>
     <!-- == End Unit Test == -->
 
-
 |
+
+.. _SetUpOfTestingData:
+
+テストデータのセットアップ
+--------------------------------------------------------------------------------
+
+テストデータをセットアップする方法について説明する。
+
+テスト用テーブルの作成方法
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+テストを実施するにあたり、データストアにデータベースを使用する場合、テスト用のデータベースのセットアップが必要になる。
+
+テスト用のテーブルは、テスト用のコンテキストファイルに\ ``<jdbc:initialize-database>``\ を定義することで
+テスト実行時にテスト用コンテキストファイル読み込むことでテスト用のRDBMSのテーブル定義(DDL文)やデータ操作(DML文)を
+発行してデータベースを初期化することができる。
+
+設定例を以下に示す。
+
+* ``test-context.xml``
+
+.. code-block:: xml
+
+  <!-- (1) -->
+  <bean id="realDataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
+    <property name="driverClassName" value="${database.driverClassName}" />
+    <property name="url" value="${database.url}" />
+    <property name="username" value="${database.username}" />
+    <property name="password" value="${database.password}" />
+    <property name="defaultAutoCommit" value="false" />
+    <property name="maxTotal" value="${cp.maxActive}" />
+    <property name="maxIdle" value="${cp.maxIdle}" />
+    <property name="minIdle" value="${cp.minIdle}" />
+    <property name="maxWaitMillis" value="${cp.maxWait}" />
+  </bean>
+
+  <!-- (2) -->
+  <jdbc:initialize-database data-source="dataSource">
+    <jdbc:script location="classpath*:/META-INF/sql/test-schema.sql" />
+  </jdbc:initialize-database>
+
+  <!-- omitted -->
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | データソースの実装クラスを指定する。
+          例では、Apache Commons DBCPから提供されているデータソースクラス
+          (\ ``org.apache.commons.dbcp2.BasicDataSource``\ )を指定する。
+    * - | (2)
+      - | テスト用データベースを作成するためのDDL文が記載されているSQLファイルを指定する。
+        | 初期投入データがある場合、DML文を指定することも可能である。
+
+
+* ``RouteRepositoryTest.java``
+
+.. code-block:: java
+
+    @RunWith(SpringJUnit4ClassRunner.class) // (1)
+    @ContextConfiguration(locations = {
+            "classpath:META-INF/spring/test-context.xml" }) // (2)
+    @Transactional
+    public class RouteRepositoryTest {
+        // omitted
+    }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | \ ``@RunWith``\ に\ ``SpringJUnit4ClassRunner``\ を指定することによって、Spring固有のアノテーションを
+          テストクラスで利用できる。
+    * - | (2)
+      - | \ ``@ContextConfiguration``\ アノテーションにテスト用の設定ファイルを指定することによって、テストを行う際は
+          テスト用の設定ファイルを読み込むようにできる。classpathを指定することによって、resource直下を参照できる。
+
+
+テスト用データの追加方法
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+テスト実行時にテストデータが必要な場合、クラスレベルまたはメソッドレベルで、\ ``@Sql``\ アノテーションを使用することで
+テスト実行前にテストデータを追加・更新することができる。
+なお、\ ``@Before``\ アノテーションを使用して、テスト実行前にテストデータを追加・更新する方法もあるが、ここでは
+\ ``@Sql``\ アノテーションを使用した方法を説明する。
+
+設定例を以下に示す。
+
+* ``RouteRepositoryTest.java``
+
+.. code-block:: java
+
+    @Test
+    @Sql("classpath:META-INF/sql/route-dataset.sql") // (1)
+    public void testFindAll() {
+        // omitted
+    }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | \ ``@Sql``\ アノテーションをメソッドレベルで指定することによって、対象のテストメソッド実行前に
+          \ ``@Sql``\ の引数に指定したSQLファイルが実行され、テストデータの追加・更新ができる。
+        | なお、 \ ``@Sql``\ アノテーションをクラスレベルで指定した場合は、\ ``@Sql``\ アノテーションの指定のない
+          テストメソッドすべてに対して適用される。
+
 
 .. _UnitTestOfInfrastructureLayer:
 
@@ -194,11 +313,11 @@ Repositoryの単体テスト
       - 特徴
       - 使い分けの方針
     * - spring-test
-      - 基本??
-      - DBUnitが使用できない場合（Spring JDBCを使用する場合）
-    * - spring-test+DBUnit
-      - 基本??
-      - DBUnitを使用できる場合
+      - Spring JDBCを使用してデータアクセスを行う。
+      - DBUnitを使用しない場合
+    * - spring-test + DBUnit + spring-test-dbunit
+      - DBUnitの機能を使用してデータアクセスを行う。
+      - DBUnitを使用する場合
 
 
 Macchinetta Server Framework 適用システムで、MyBatis3を使用して\ ``Repository``\ を実装している場合、
@@ -266,7 +385,6 @@ spring-testを使用するための設定
       <!-- (1) -->
       <context:property-placeholder location="classpath*:/META-INF/spring/*.properties" />
 
-      <!-- (2) -->
       <bean id="realDataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
         <property name="driverClassName" value="${database.driverClassName}" />
         <property name="url" value="${database.url}" />
@@ -283,16 +401,16 @@ spring-testを使用するための設定
         <constructor-arg index="0" ref="realDataSource" />
       </bean>
 
-      <!-- (3) -->
+      <!-- (2) -->
       <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
         <property name="dataSource" ref="dataSource" />
         <property name="typeAliasesPackage" value="jp.co.ntt.atrs.domain.model, jp.co.ntt.atrs.domain.repository" />
       </bean>
 
-      <!-- (4) -->
+      <!-- (3) -->
       <mybatis:scan base-package="jp.co.ntt.atrs.domain.repository" />
 
-      <!-- (5) -->
+      <!-- (4) -->
       <bean class="org.springframework.jdbc.core.JdbcTemplate">
         <constructor-arg ref="dataSource" />
       </bean>
@@ -300,15 +418,15 @@ spring-testを使用するための設定
         <constructor-arg ref="dataSource" />
       </bean>
 
-      <!-- (6) -->
+      <!-- (5) -->
       <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
         <property name="dataSource" ref="dataSource" />
       </bean>
 
-      <!-- (7) -->
+      <!-- (6) -->
       <tx:annotation-driven />
 
-      <!-- (8) -->
+      <!-- (7) -->
       <context:annotation-config />
       <context:component-scan base-package="jp.co.ntt.atrs.domain.repository" />
 
@@ -327,26 +445,20 @@ spring-testを使用するための設定
         | Bean定義ファイルに ``<context:property-placeholder/>`` タグを定義することで、
           JavaクラスやBean定義ファイル内でプロパティファイル内の値にアクセスできるようになる。
     * - | (2)
-      - | データソースの実装クラスを指定する。
-          例では、Apache Commons DBCPから提供されているデータソースクラス
-          (\ ``org.apache.commons.dbcp2.BasicDataSource``\ )を指定する。
-        | データソースを定義する際に設定するドライバクラス名やURLなどの接続情報は、メンテナンス性向上のため
-          プロパティファイルに定義すること。
-    * - | (3)
       - | \ ``SqlSessionFactory`` \を生成するためのコンポーネントとして\ ``org.mybatis.spring.SqlSessionFactoryBean`` \
           をBean定義する。
-    * - | (4)
+    * - | (3)
       - | MyBatisがマッパーを自動スキャンするパッケージを設定。
         | Repositoryのメソッドが呼び出されるとマッパーのSQLが実行される。
-    * - | (5)
+    * - | (4)
       - | \ ``org.springframework.jdbc.core.JdbcTemplate``\ クラスをBean定義する。
-    * - | (6)
+    * - | (5)
       - | \ ``org.springframework.jdbc.datasource.DataSourceTransactionManager`` \クラスをBean定義する。
           \ ``dataSource`` \プロパティには、設定済みのデータソースのbeanを指定する。
-    * - | (7)
+    * - | (6)
       - | \ ``<tx:annotation-driven>``\ を追加することで、\ ``@Transactional``\ アノテーションを使った
           トランザクション境界の指定が有効となる。
-    * - | (8)
+    * - | (7)
       - | \ ``jp.co.ntt.atrs.domain.repository``\ パッケージ配下をcomponent-scan対象とする。
 
 .. _ImplementOfRepositoryTest:
@@ -360,18 +472,18 @@ Repositoryの単体テストクラスの作成方法を説明する。
 
 .. code-block:: java
 
-    @RunWith(SpringJUnit4ClassRunner.class) // (1)
+    @RunWith(SpringJUnit4ClassRunner.class)
     @ContextConfiguration(locations = {
-            "classpath:META-INF/spring/test-context.xml" }) // (2)
-    @Transactional // (3)
-    @Rollback // (4)
+            "classpath:META-INF/spring/test-context.xml" })
+    @Transactional // (1)
+    @Rollback // (2)
     public class RouteRepositoryTest {
 
         @Inject
-        RouteRepository target; // (5)
+        RouteRepository target; // (3)
 
         @Inject
-        JdbcTemplate jdbctemplate; // (6)
+        JdbcTemplate jdbctemplate; // (4)
 
         // ommited
 
@@ -385,25 +497,17 @@ Repositoryの単体テストクラスの作成方法を説明する。
     * - 項番
       - 説明
     * - | (1)
-      - | \ ``@RunWith``\ アノテーションを付与する。
-        | \ ``@RunWith``\ に\ ``SpringJUnit4ClassRunner``\ を指定することによって、Spring固有のアノテーションを
-          テストクラスで利用できる。
-    * - | (2)
-      - | \ ``@ContextConfiguration``\ アノテーションを付与する。
-        | \ ``@ContextConfiguration``\ アノテーションにテスト用の設定ファイルを指定することによって、テストを行う際は
-          テスト用の設定ファイルを読み込むようにできる。classpathを指定することによって、resource直下を参照できる。
-    * - | (3)
       - | \ ``@Transactional``\ アノテーションを付与する。
         | テストクラスに\ ``@Transactional``\ アノテーションを宣言することで、テストクラスが持つテストメソッドは
           トランザクション制御の対象となる。
-    * - | (4)
+    * - | (2)
       - | \ ``@Rollback``\ アノテーションを付与する。
         | テストクラスに\ ``@Rollback``\ アノテーションを宣言することで、各テストメソッドの終了時にトランザクションが
           ロールバックされるようになる。これによって、テストの実行によるDBの内容の変更を防ぐことができる。
-    * - | (5)
+    * - | (3)
       - | 試験対象のクラスをインジェクションする。
         | 試験対象である\ ``RouteRepository``\ クラスをインジェクションする。
-    * - | (6)
+    * - | (4)
       - | \ ``JdbcTemplate``\ クラスをインジェクションする。
         | \ ``JdbcTemplate``\ とはSpring JDBCサポートのコアクラスである。JDBC APIではデータソースからコネクションの取得、
           PreparedStatementの作成、ResultSetの解析、コネクションの解放などを行う必要があるが、\ ``JdbcTemplate``\ 
@@ -429,6 +533,21 @@ Repositoryの単体テストクラスの作成方法を説明する。
     \ ``@TransactionConfiguration(defaultRollback = true)``\ を設定する必要がある。
 
 |
+
+.. note:: **テスト用のトランザクション制御**
+
+    \ ``@Sql``\ を使用してテストデータをセットアップする場合、デフォルトではテストデータをセットアップする際の
+    トランザクションと、テストメソッド実行時にデータアクセスする際のトランザクションは別々となる。
+    そのため、テストデータをセットアップした後に一度コミットが行われ、テストメソッド実行後にデータアクセスがある場合は
+    もう一度コミットが行われる。
+    そのため、テストメソッド実行前にデータベースの状態が変わっている可能性があることに注意されたい。
+    
+    なお、\ ``@Transactional``\ を付与することで、同一トランザクション内でテストデータのセットアップと
+    テストメソッド実行を行うことができる。
+    \ ``@Transactional``\ はデフォルトでテストメソッド実行後にロールバックされる。
+    \ ``@Transactional``\ をクラスレベルで指定すると、指定したテストクラス全てのテストメソッドに対して
+    トランザクション境界をテストメソッド単位にいどうすることができる。
+
 
 次にテスト用データを投入するメソッドを追加する。★@Sqlを使用するのであれば、上で説明する
 
@@ -459,9 +578,7 @@ Repositoryの単体テストクラスの作成方法を説明する。
     INSERT/UPDATE/DELETE文はいずれも更新系のSQLなので、1つのメソッドに集約されている。
     メソッド名の「update」は、UPDATE文を意味するわけではないので、注意すること。
     使用法としては、第1引数にSQL文を指定し、第2引数以降にパラメータの値を指定すること。
-    SELECT文の使用法については次の参照系のテストメソッドの作成例にて説明を行う。
-    
-    ※@Sqlをメインで書く場合、JdbcTemplateが出てこないので、noteの位置と内容を変更
+
 
 |
 
@@ -818,7 +935,7 @@ Repositoryテストの実装(DBUnitと連携する場合)
       - | 
 
 
-.. note:: **DbJUnitのExcelバージョンについて**
+.. note:: **DBUnitのExcelバージョンについて**
 
     DBUnitでは、FlatXML以外にExcel形式（.xlsx）のデータ定義ファイルをテストデータや期待結果データとして用いることが出来る。
 
@@ -1001,7 +1118,7 @@ Repositoryをインジェクションしてテストする方法は\ :ref:`Imple
 
 .. _TestingServiceWithMockito:
 
-JunitとMocitoを使用した試験
+JunitとMockitoを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 概要
@@ -1286,26 +1403,10 @@ Serviceのモッククラスの作成方法については、\ :ref:`ImplementOf
 Helperの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
-.. list-table::
-    :header-rows: 1
-    :widths: 20 20 60
-
-    * - テストパターン
-      - 特徴
-      - 使い分けの方針
-    * - Junit + Mockito
-      - 基本??
-      - 
-
 Helperの単体テストで、特別に意識すべきことはない。通常のPOJO(Plain Old Java Object)と同様にJUnitによる
 単体テストを実施する。
 
-テスト実装例
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
 実装方法については、\ :ref:`UnitTestOfServiceLayer`\ を参照されたい。
-
 
 
 Validatorの単体テスト
