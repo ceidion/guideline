@@ -1342,7 +1342,7 @@
     * - 2013-12-17
       - 日本語版
       - 1.0.0 Public Review版公開
-	* -
+    * -
       - :doc:`../Security/SecureLoginDemo`
       - 記載内容の削除
 
