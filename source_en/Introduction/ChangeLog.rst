@@ -1320,7 +1320,7 @@ Change Log
     * - 2013-12-17
       - Japanese version
       - Released "1.0.0 Public Review" version
-	* -
+    * -
       - :doc:`../Security/SecureLoginDemo`
       - Description details deleted
 
