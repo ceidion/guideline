@@ -6004,11 +6004,6 @@ How to use
    * - | (1)
      - | \ ``PasswordGenerator`` \の\ ``generatePassword`` \メソッドに、生成するパスワードの長さと生成規則を引数として渡すと、生成規則を満たしたパスワードが生成される。
 
-.. tip::
-
-   Bean定義したコレクションをDIする際には、\ ``@Inject`` \ + \ ``@Named`` \では期待した動作をしない。
-   そのため、代わりに\ ``@Resource`` \を使用してBean名でDIする。
-
 .. raw:: latex
 
    \newpage
