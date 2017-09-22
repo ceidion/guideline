@@ -6003,11 +6003,6 @@ Create a password by using created generator and generation rules.
    * - | (1)
      - | If length of the password to be generated and the generation rules are passed to \ ``generatePassword`` \  method of \ ``PasswordGenerator`` \  as arguments, a password which fulfils the generation rules is created.
 
-.. tip::
-     
-   When DI is to be applied to a collection for which a Bean is defined, an expected operation is not performed by \ ``@Inject`` \  + \ ``@Named`` \ .
-   Therefore, DI is applied by Bean name using \ ``@Resource`` \  instead.
-
 .. raw:: latex
 
    \newpage

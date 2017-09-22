@@ -1320,6 +1320,11 @@ Change Log
     * - 2013-12-17
       - Japanese version
       - Released "1.0.0 Public Review" version
+	* -
+      - :doc:`../Security/SecureLoginDemo`
+      - Description details deleted
+
+        * Tip deleted(\ `guideline#2967 <https://github.com/terasolunaorg/guideline/issues/2967>`_\ )
 
 .. raw:: latex
 
