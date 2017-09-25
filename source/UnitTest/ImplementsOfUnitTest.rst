@@ -401,6 +401,8 @@ Repositoryの単体テストは、JUnitを使用して実施する。
 
 作成するファイル例を以下に示す。
 
+.. figure:: ./images/UnitTestRepositorySpringTestItems.png
+
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
     :header-rows: 1
@@ -794,8 +796,7 @@ DBUnitとは、データベースに依存するクラスのテストを行う�
 
 DBUnitを利用したRepositoryの単体テストにおいて、作成するファイルを以下に示す。
 
-.. figure:: ./images/UnitTestProjectConfigurationDbunit.png
-   :width: 95%
+.. figure:: ./images/UnitTestRepositoryDbunitItems.png
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
@@ -999,6 +1000,8 @@ spring-testを使用した試験
 
 作成するファイルを以下に示す。
 
+.. figure:: ./images/UnitTestServiceSpringTestItems.png
+
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
     :header-rows: 1
@@ -1029,6 +1032,8 @@ JunitとMockitoを使用した試験
 \ ``Repository``\ クラスなど\ ``ServiceImpl``\ クラスが依存するクラスをモック化する場合のテスト作成方法を説明する。
 
 作成するファイルを以下に示す。
+
+.. figure:: ./images/UnitTestServiceMockItems.png
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
@@ -1091,6 +1096,8 @@ spring-test + MockMVC + Mockitoを使用した試験
 Serviceクラスがテスト済みの場合は、テスト済みのServiceクラスを使用する。
 
 作成するファイルを以下に示す。
+
+.. figure:: ./images/UnitTestControllerStandaloneSetupItems.png
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
@@ -1334,7 +1341,9 @@ Validator(Bean Validation)の単体テストについては、JUnitを使用し�
 
 作成するファイルを以下に示す。
 
-・フォルダ構成の図★
+.. figure:: ./images/UnitTestBeanValidationItems.png
+
+・フォルダ構成の図
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
@@ -1410,7 +1419,9 @@ Validator(Spring Validation)の単体テストについては、JUnitを使用�
 
 作成するファイルを以下に示す。
 
-・フォルダ構成の図★
+.. figure:: ./images/UnitTestSpringValidationItems.png
+
+・フォルダ構成の図
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::

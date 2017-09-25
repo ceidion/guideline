@@ -38,6 +38,28 @@ IDE上でテストを実行
 　実行方法を記載する
 　ハードコピー等で視覚的に見やすい表現中心にする
 　逆に文字はあまりいらない
+　
+.. figure:: ./images/UnitTestIdeClickTestClass.png
+
+.. figure:: ./images/UnitTestIdeRunClassJunit.png
+
+.. figure:: ./images/UnitTestIdeSuccessJunit.png
+
+.. figure:: ./images/UnitTestIdeFailJunit.png
+
+.. figure:: ./images/UnitTestIdeErrorJunit.png
+
+.. figure:: ./images/UnitTestIdeClickTestProject.png
+
+.. figure:: ./images/UnitTestIdeRunProjectJunit.png
+
+.. figure:: ./images/UnitTestIdeSuccessProjectJunit.png
+
+.. figure:: ./images/UnitTestIdeClickTestMethod.png
+
+.. figure:: ./images/UnitTestIdeRunMethodJunit.png
+
+.. figure:: ./images/UnitTestIdeSuccessMethodJunit.png
 
 mavenでテストを実行
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
