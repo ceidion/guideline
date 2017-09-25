@@ -1,5 +1,7 @@
 ★：要検討
 
+.. _ImplementOfUnitTest:
+
 単体テストの実装
 ================================================================================
 
@@ -7,8 +9,6 @@
 
  .. contents:: 目次
     :local:
-
-.. _UnitTestOverview:
 
 Overview
 --------------------------------------------------------------------------------
@@ -23,38 +23,52 @@ Overview
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 15 35 50
+    :widths: 20 20 25 35
 
-    * - 試験対象
+    * - レイヤー
+      - 試験対象
       - 試験方法
       - 詳細
-    * - Repository
+    * - インフラストラクチャ層
+      - Repository
       - spring-test
-      - DB操作にSpring JDBCを使用する。
+      - データアクセスにSpring JDBCを使用する場合
     * - 
-      - spring-test + DBUnit
-      - DB操作にDBUnitを使用する。
-    * - Service
+      - 
+      - spring-test + DBUnit + spring-test-dbunit
+      - データアクセスにDBUnitを使用する場合
+    * - ドメイン層
+      - Repository + Service
       - spring-test
-      - テスト済みのRepositoryを使用する。トランザクション境界の確認する。
+      - テスト済みのRepositoryを使用する場合。トランザクション境界の確認する
     * - 
+      - Service
       - Junit + Mockito
       - モックを使用する場合
-    * - Controller
-      - spring-test + MockMVC + Mockito
+    * - アプリケーション層
+      - Repository + Service + Controller
+      - spring-test + MockMVC
       - モックを使用する場合
-    * - Helper
+    * - 
+      - Controller
+      - JUnit + MockMVC + Mockito
+      - モックを使用する場合
+    * - 
+      - Repository + Service + Helper
       - spring-test
-      - DB操作にSpring JDBCを使用する場合
+      - データアクセスにSpring JDBCを使用する場合
     * - 
+      - Repository + Service + Helper
       - spring-test + DBUnit
-      - DB操作にDBUnitを使用する場合
-    * - Validation
-      - JUnit
-      - Bean Validationの場合
+      - データアクセスにDBUnitを使用する場合
     * - 
+      - Validation
       - JUnit
-      - Spring Validationの場合
+      - Bean Validationを使用する場合
+    * - 
+      - 
+      - JUnit
+      - Spring Validationを使用する場合
 
 |
 
@@ -65,7 +79,8 @@ OSSのバージョン★
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 単体テストで利用するOSS一覧を以下に示す。
-サンプルを動作させるために利用するOSS一覧については、\ :ref:`frameworkstack_using_oss_version`\ を参照されたい。
+なお、本章では全ての機能を網羅しているわけではないため、使用するOSSはあくまで1例である。
+また、サンプルを動作させるために利用するOSS一覧については、\ :ref:`frameworkstack_using_oss_version`\ を参照されたい。
 
 .. tabularcolumns:: |p{0.15\linewidth}|p{0.27\linewidth}|p{0.25\linewidth}|p{0.15\linewidth}|p{0.05\linewidth}|p{0.08\linewidth}|
 .. list-table::
@@ -276,7 +291,52 @@ OSSのバージョン★
           テストメソッドすべてに対して適用される。
 
 
-.. _UnitTestOfInfrastructureLayer:
+シーケンスの初期化方法
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+シーケンスは、トランザクションをロールバックしても進んだ値は戻らないという特徴を持つ。
+そのため、DBUnitでシーケンスから採番したカラムを持つレコードを検証する場合、シーケンスから採番したカラムは
+検証対象外とするか、以下のように明示的にシーケンスの初期化を行うSQLを実行し、テストの実施前に初期化する必要がある。
+
+* シーケンスの初期化（PostgreSQLの例）
+
+.. code-block:: java
+
+    @Inject
+    private JdbcTemplate jdbcTemplate;
+
+    @Test
+    public void testUpdate() throws Exception {
+
+        // ID払い出し用のシーケンスをリセット
+        jdbcTemplate.execute("ALTER SEQUENCE record_id_seq RESTART WITH 1");
+
+        // シーケンスに依存した処理の呼び出し
+    }
+
+* テストクラス内の全テストメソッドでシーケンスの初期化が必要な場合の共通化（PostgreSQLの例）
+
+テストクラス内の全テストメソッドでシーケンスの初期化が必要な場合、 @Beforeアノテーションを付与したメソッド内で
+シーケンスの初期化処理を呼び出すことで、共通化を行うことが可能である。★@Sqlを使用？
+
+.. code-block:: java
+
+    @Inject
+    private JdbcTemplate jdbcTemplate;
+
+    @Before
+    public void setUp() {
+        // ID払い出し用のシーケンスをリセット
+        jdbcTemplate.execute("ALTER SEQUENCE SQ_MEMBER_1 RESTART WITH 1");
+    }
+
+    @Test
+    public void testUpdate1() throws Exception {
+
+        // シーケンスに依存した処理の呼び出し
+    }
+
+|
 
 インフラストラクチャ層の単体テスト
 --------------------------------------------------------------------------------
@@ -549,7 +609,7 @@ Repositoryの単体テストクラスの作成方法を説明する。
     トランザクション境界をテストメソッド単位にいどうすることができる。
 
 
-次にテスト用データを投入するメソッドを追加する。★@Sqlを使用するのであれば、上で説明する
+次にテスト用データを投入するメソッドを追加する。★@Sqlを使用例を示す？
 
 * ``RouteRepositoryTest.java``
 
@@ -734,7 +794,7 @@ DBUnitとは、データベースに依存するクラスのテストを行う�
 
 DBUnitを利用したRepositoryの単体テストにおいて、作成するファイルを以下に示す。
 
-.. figure:: ./images/UnitTest_project_configuration_dbunit.png
+.. figure:: ./images/UnitTestProjectConfigurationDbunit.png
    :width: 95%
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
@@ -829,113 +889,7 @@ Repositoryテストの実装(DBUnitと連携する場合)
 
 |
 
-次にテスト用データを投入する方法の例を示す。
-
-* ``RouteRepositoryTest.java``
-
-.. code-block:: java
-
-
-
-
-
-
-参照系のテストメソッドの作成例を以下に示す。
-
-* ``RouteRepositoryTest.java``
-
-.. code-block:: java
-
-    package jp.co.ntt.atrs.domain.repository.route;
-
-    @Test
-    public void testfindAll() throws Exception {
-
-        // テスト対象の実行
-        List<Route> routes = target.findAll();
-
-        // DBにアクセスして、現在の登録されている情報を全て取得
-        String sql = "SELECT r.route_no, r.basic_fare, a_dep.airport_cd AS dep_airport_cd, 
-                + a_dep.airport_name AS dep_airport_name, "
-                + "a_arr.airport_cd AS aar_airport_cd, a_arr.airport_name AS aar_airport_name "
-                + "FROM route r, airport a_dep, airport a_arr " + "WHERE r.dep_airport_cd = a_dep.airport_cd "
-                + "AND r.arr_airport_cd = a_arr.airport_cd";
-
-        List<Route> actualList = jdbctemplate.query(sql, new RouteRowMapper());
-
-        // 期待した結果が返却されてくることの確認
-        assertEquals(routes.size(), actualList.size());
-
-        // expectedListとactualListの内容が合っているかの確認 （追加部分）
-        // 中身も同じであることを確認したほうがいいと思ったため。
-        for (int i = 0; i < actualList.size(); i++) {
-
-            Route route = routes.get(i);
-            Route actualRoute = actualList.get(i);
-
-            assertEquals(actualRoute.getRouteNo(), route.getRouteNo());
-
-            assertEquals(actualRoute.getDepartureAirport().getCode(), route.getDepartureAirport().getCode());
-            assertEquals(actualRoute.getDepartureAirport().getName(), route.getDepartureAirport().getName());
-            assertEquals(actualRoute.getDepartureAirport().getDisplayOrder(),
-                    route.getDepartureAirport().getDisplayOrder());
-
-            assertEquals(actualRoute.getArrivalAirport().getCode(), route.getArrivalAirport().getCode());
-            assertEquals(actualRoute.getArrivalAirport().getName(), route.getArrivalAirport().getName());
-            assertEquals(actualRoute.getArrivalAirport().getDisplayOrder(),
-                    route.getArrivalAirport().getDisplayOrder());
-
-            assertEquals(actualRoute.getBasicFare(), route.getBasicFare());
-        }
-
-        // 比較用データ （追加部分）
-        IDataSet expectedDataSet = new FlatXmlDataSetBuilder()
-                .build(new File("src/test/resources/META-INF/data/after_data.xml"));
-
-        // データが変わっていないことの確認 （追加部分）
-        Assertion.assertEquals(getDataSet(), expectedDataSet);
-
-    }
-
-    private static class RouteRowMapper implements RowMapper<Route> {
-
-        @Override
-        public Route mapRow(ResultSet rss, int rowNum) throws SQLException {
-            Route r = new Route();
-            Airport arr = new Airport();
-            arr.setCode(rs.getString("AAR_AIRPORT_CD"));
-            arr.setName(rs.getString("AAR_AIRPORT_NAME"));
-
-            Airport dep = new Airport();
-            dep.setCode(rs.getString("DEP_AIRPORT_CD"));
-            dep.setName(rs.getString("DEP_AIRPORT_NAME"));
-
-            r.setRouteNo(rs.getInt("ROUTE_NO"));
-            r.setBasicFare(rs.getInt("BASIC_FARE"));
-            r.setArrivalAirport(arr);
-            r.setDepartureAirport(dep);
-
-            return r;
-        }
-    }
-
-
-.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
-.. list-table::
-    :header-rows: 1
-    :widths: 10 90
-
-    * - 項番
-      - 説明
-    * - | (1)
-      - | 
-    * - | (2)
-      - | 
-    * - | (3)
-      - | 
-
-
-.. note:: **DBUnitのExcelバージョンについて**
+.. note:: **DBUnitのExcelバージョンについて★★**
 
     DBUnitでは、FlatXML以外にExcel形式（.xlsx）のデータ定義ファイルをテストデータや期待結果データとして用いることが出来る。
 
@@ -943,7 +897,7 @@ Repositoryテストの実装(DBUnitと連携する場合)
     Excel形式のデータ定義ファイル読込ロジックを定義したDataSetLoaderを実装し、spring-test-dbunitが利用するように設定すれば
     実現できる。
 
-    以下、実装例を示す。※spring-test-dbunitを使用しない場合は、別途実装方法の調査が必要
+    以下、実装例を示す。
 
     * XlsDataLoaderの実装
 
@@ -979,61 +933,7 @@ Repositoryテストの実装(DBUnitと連携する場合)
     Excel形式のデータ定義ファイルでは、各シートが各テーブルに対応する。
     シート名にはテーブル名、シートの一行目にはカラム名を設定する。 二行目以降にテーブルに挿入されるデータを記述する。
 
-
-.. note:: **シーケンスの初期化**
-
-    シーケンスは、トランザクションをロールバックしても進んだ値は戻らないという特徴を持つ。
-    そのため、DBUnitでシーケンスから採番したカラムを持つレコードを検証する場合、シーケンスから採番したカラムは
-    検証対象外とするか、以下のように明示的にシーケンスの初期化を行うSQLを実行し、テストの実施前に初期化する必要がある。
-
-    * シーケンスの初期化（PostgreSQLの例）
-
-     .. code-block:: java
-
-        @Inject
-        private JdbcTemplate jdbcTemplate;
-
-        @Test
-        public void testUpdate() throws Exception {
-
-            // ID払い出し用のシーケンスをリセット
-            jdbcTemplate.execute("ALTER SEQUENCE record_id_seq RESTART WITH 1");
-
-            // シーケンスに依存した処理の呼び出し
-        }
-
-    * テストクラス内の全テストメソッドでシーケンスの初期化が必要な場合の共通化（PostgreSQLの例）
-
-    テストクラス内の全テストメソッドでシーケンスの初期化が必要な場合、 @Beforeアノテーションを付与したメソッド内で
-    シーケンスの初期化処理を呼び出すことで、共通化を行うことが可能である。
-
-     .. code-block:: java
-
-        @Inject
-        private JdbcTemplate jdbcTemplate;
-
-        @Before
-        public void setUp() {
-            // ID払い出し用のシーケンスをリセット
-            jdbcTemplate.execute("ALTER SEQUENCE SQ_MEMBER_1 RESTART WITH 1");
-        }
-
-        @Test
-        public void testUpdate1() throws Exception {
-
-            // シーケンスに依存した処理の呼び出し
-        }
-
-        @Test
-        public void testUpdate2() throws Exception {
-
-            // シーケンスに依存した処理の呼び出し
-        }
-
-
 |
-
-.. _UnitTestOfDomainLayer:
 
 ドメイン層の単体テスト
 --------------------------------------------------------------------------------
@@ -1053,7 +953,7 @@ Repositoryテストの実装(DBUnitと連携する場合)
    :width: 95%
 
 
-.. _UnitTestOfServiceLayer:
+.. _UnitTestOfService:
 
 Serviceの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1067,10 +967,10 @@ Serviceの単体テスト
       - 特徴
       - 使い分けの方針
     * - spring-test
-      - 基本??
+      - 基本??★
       - 依存クラスがテスト済みでモック化する必要がない場合
     * - Junit + Mockito
-      - 基本??
+      - 基本??★
       - モック化が必要な場合
 
 Serviceの単体テストについては、JUnitを使用して\ ``Service``\ クラスの実装クラス（\ ``ServiceImpl``\）に対して
@@ -1092,7 +992,7 @@ spring-testを使用した試験
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-・フォルダ構成の図
+・フォルダ構成の図★
 
 テスト済みの\ ``Repository``\ クラスを使用する場合、DBUnitを使用して\ ``Repository``\ クラスをインジェクションして
 テスト対象の\ ``ServiceImpl``\ クラスのテスト作成方法を説明する。
@@ -1124,7 +1024,7 @@ JunitとMockitoを使用した試験
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-・フォルダ構成の図
+・フォルダ構成の図★
 
 \ ``Repository``\ クラスなど\ ``ServiceImpl``\ クラスが依存するクラスをモック化する場合のテスト作成方法を説明する。
 
@@ -1152,8 +1052,6 @@ Serviceテストの実装
 ・Serviceのテストクラス作成
 
 |
-
-.. _UnitTestOfAplicationLayer:
 
 アプリケーション層の単体テスト
 --------------------------------------------------------------------------------
@@ -1406,7 +1304,7 @@ Helperの単体テスト
 Helperの単体テストで、特別に意識すべきことはない。通常のPOJO(Plain Old Java Object)と同様にJUnitによる
 単体テストを実施する。
 
-実装方法については、\ :ref:`UnitTestOfServiceLayer`\ を参照されたい。
+実装方法については、\ :ref:`UnitTestOfService`\ を参照されたい。
 
 
 Validatorの単体テスト
@@ -1436,7 +1334,7 @@ Validator(Bean Validation)の単体テストについては、JUnitを使用し�
 
 作成するファイルを以下に示す。
 
-・フォルダ構成の図
+・フォルダ構成の図★
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
@@ -1512,7 +1410,7 @@ Validator(Spring Validation)の単体テストについては、JUnitを使用�
 
 作成するファイルを以下に示す。
 
-・フォルダ構成の図
+・フォルダ構成の図★
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
