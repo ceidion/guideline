@@ -611,36 +611,12 @@ Repositoryの単体テストクラスの作成方法を説明する。
     トランザクション境界をテストメソッド単位にいどうすることができる。
 
 
-次にテスト用データを投入するメソッドを追加する。★@Sqlを使用例を示す？
-
-* ``RouteRepositoryTest.java``
-
-.. code-block:: java
-
-    @Before // (1)
-    public void setUp() throws Exception {
-
-    }
-
-
-
-.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
-.. list-table::
-    :header-rows: 1
-    :widths: 10 90
-
-    * - 項番
-      - 説明
-    * - | (1)
-      - | 
-
 .. note:: **JdbcTemplateの使い方(INSERT/UPDATE/DELETE文)**
 
     JdbcTemplateにて、INSERT/UPDATE/DELETE文を発行する際はupdateメソッドを使用する。
     INSERT/UPDATE/DELETE文はいずれも更新系のSQLなので、1つのメソッドに集約されている。
     メソッド名の「update」は、UPDATE文を意味するわけではないので、注意すること。
     使用法としては、第1引数にSQL文を指定し、第2引数以降にパラメータの値を指定すること。
-
 
 |
 
