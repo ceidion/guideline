@@ -82,47 +82,41 @@ OSSのバージョン★
 なお、本章では全ての機能を網羅しているわけではないため、使用するOSSはあくまで1例である。
 また、サンプルを動作させるために利用するOSS一覧については、\ :ref:`frameworkstack_using_oss_version`\ を参照されたい。
 
-.. tabularcolumns:: |p{0.15\linewidth}|p{0.27\linewidth}|p{0.25\linewidth}|p{0.15\linewidth}|p{0.05\linewidth}|p{0.08\linewidth}|
+.. tabularcolumns:: |p{0.15\linewidth}|p{0.27\linewidth}|p{0.25\linewidth}|p{0.15\linewidth}|p{0.13\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 15 27 25 15 5 8
+    :widths: 15 27 25 15 13
 
     * - Type
       - GroupId
       - ArtifactId
       - Version
       - Spring IO platform
-      - Remarks
     * - Spring
       - org.springframework
       - spring-test
       - 4.3.5.RELEASE
       - \*
-      -
     * - Mockito
       - org.mockito
       - mockito-core
       - 1.10.19
       - \*
-      -
     * - JUnit
       - junit
       - junit
       - 4.12
       - \*
-      -
     * - SpringDBUnit
       - com.github.springtestdbunit
       - spring-test-dbunit
       - 1.3.0
       - \
-      -
     * - DBUnit
       - org.dbunit
       - dbunit
       - 2.5.4
       - \
-      -
 
 |
 
@@ -177,7 +171,9 @@ OSSのバージョン★
 テストデータのセットアップ
 --------------------------------------------------------------------------------
 
-テストデータをセットアップする方法について説明する。
+ここではテストを実装する前段階として、テストデータについて説明する。
+本章では、テストクラス実行時にテストデータをデータベース上に用意することを前提として、テスト用テーブルの作成方法および
+テストデータの初期化方法について説明する。
 
 テスト用テーブルの作成方法
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -185,8 +181,8 @@ OSSのバージョン★
 テストを実施するにあたり、データストアにデータベースを使用する場合、テスト用のデータベースのセットアップが必要になる。
 
 テスト用のテーブルは、テスト用のコンテキストファイルに\ ``<jdbc:initialize-database>``\ を定義することで
-テスト実行時にテスト用コンテキストファイル読み込むことでテスト用のRDBMSのテーブル定義(DDL文)やデータ操作(DML文)を
-発行してデータベースを初期化することができる。
+テストクラス実行時にテスト用コンテキストファイルを読み込むことでテスト用のRDBMSのテーブル定義(DDL文)や
+データ操作(DML文)を発行してデータベースを初期化することができる。
 
 設定例を以下に示す。
 
@@ -290,51 +286,48 @@ OSSのバージョン★
         | なお、 \ ``@Sql``\ アノテーションをクラスレベルで指定した場合は、\ ``@Sql``\ アノテーションの指定のない
           テストメソッドすべてに対して適用される。
 
+.. note:: **シーケンスの初期化方法**
 
-シーケンスの初期化方法
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    シーケンスは、トランザクションをロールバックしても進んだ値は戻らないという特徴を持つ。
+    そのため、DBUnitでシーケンスから採番したカラムを持つレコードを検証する場合、シーケンスから採番したカラムは
+    検証対象外とするか、以下のように明示的にシーケンスの初期化を行うSQLを実行し、テストの実施前に初期化する必要がある。
 
-シーケンスは、トランザクションをロールバックしても進んだ値は戻らないという特徴を持つ。
-そのため、DBUnitでシーケンスから採番したカラムを持つレコードを検証する場合、シーケンスから採番したカラムは
-検証対象外とするか、以下のように明示的にシーケンスの初期化を行うSQLを実行し、テストの実施前に初期化する必要がある。
+    * initialSequence.sql（PostgreSQLの例）
+    
+     .. code-block:: sql
+     
+        ALTER SEQUENCE SQ_MEMBER_1 RESTART WITH 1;
 
-* シーケンスの初期化（PostgreSQLの例）
+    * シーケンスの初期化
 
-.. code-block:: java
+     .. code-block:: java
 
-    @Inject
-    private JdbcTemplate jdbcTemplate;
+        @Inject
+        private JdbcTemplate jdbcTemplate;
 
-    @Test
-    public void testUpdate() throws Exception {
+        @Test
+        @Sql("classpath:META-INF/sql/initialSequence.sql")
+        public void testUpdate() throws Exception {
 
-        // ID払い出し用のシーケンスをリセット
-        jdbcTemplate.execute("ALTER SEQUENCE record_id_seq RESTART WITH 1");
+            // シーケンスに依存した処理の呼び出し
+        }
 
-        // シーケンスに依存した処理の呼び出し
-    }
+    * テストクラス内の全テストメソッドでシーケンスの初期化が必要な場合の共通化（PostgreSQLの例）
 
-* テストクラス内の全テストメソッドでシーケンスの初期化が必要な場合の共通化（PostgreSQLの例）
+    テストクラス内の全テストメソッドでシーケンスの初期化が必要な場合、 クラスレベルに@Sqlを付与すると、
+    @Sqlを付与していない各メソッドに対してシーケンスの初期化処理を呼び出すことができ、共通化できる。
 
-テストクラス内の全テストメソッドでシーケンスの初期化が必要な場合、 @Beforeアノテーションを付与したメソッド内で
-シーケンスの初期化処理を呼び出すことで、共通化を行うことが可能である。★@Sqlを使用？
+     .. code-block:: java
 
-.. code-block:: java
+        @Sql("classpath:META-INF/sql/initialSequence.sql")
+        public class TicketReserveServiceImplTestInject {
 
-    @Inject
-    private JdbcTemplate jdbcTemplate;
+            @Test
+            public void testUpdate1() throws Exception {
 
-    @Before
-    public void setUp() {
-        // ID払い出し用のシーケンスをリセット
-        jdbcTemplate.execute("ALTER SEQUENCE SQ_MEMBER_1 RESTART WITH 1");
-    }
-
-    @Test
-    public void testUpdate1() throws Exception {
-
-        // シーケンスに依存した処理の呼び出し
-    }
+                // シーケンスに依存した処理の呼び出し
+            }
+        }
 
 |
 
@@ -350,10 +343,10 @@ OSSのバージョン★
 DBとのアクセス部分がインフラストラクチャ層のテストスコープとなる。
 本節は、インフラストラクチャ層の\ ``Repository``\ クラスに対するテストの作成例を示す。
 
-なお、Macchinetta Server Framework 適用システムで、MyBatis3を使用して\ ``Repository``\ を実装している場合、
-\ ``RepositoryImpl``\ はMapperインタフェース（\ ``Repository``\）とマッピングファイルから自動生成される。
+なお、MyBatis3を使用して\ ``Repository``\ を実装している場合、\ ``RepositoryImpl``\ はMapperインタフェース
+（\ ``Repository``\）とマッピングファイルから自動生成される。
 本節のテスト対象は正確には\ ``Repository``\ インタフェースではなく、自動生成された\ ``RepositoryImpl``\ となることに
-注意すること。
+注意すること。詳細は、\ :ref:`repository-mybatis3-label`\ を参照されたい。
 
 インフラストラクチャ層のテスト対象のコンポーネントを以下に示す。
 
@@ -367,26 +360,20 @@ Repositoryの単体テスト
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 20 20 60
+    :widths: 30 30 40
 
-    * - テストパターン
-      - 特徴
+    * - 使用するテストライブラリ(JUnit以外)
+      - 説明
       - 使い分けの方針
     * - spring-test
-      - Spring JDBCを使用してデータアクセスを行う。
-      - DBUnitを使用しない場合
+      - Spring JDBCを使用してデータ操作を行う。
+      - テストデータをsqlファイルで管理する場合
     * - spring-test + DBUnit + spring-test-dbunit
-      - DBUnitの機能を使用してデータアクセスを行う。
-      - DBUnitを使用する場合
+      - DBUnit、spring-test-dbunitの機能を使用してデータ操作を行う。
+      - テストデータをExcelまたはCSVファイルで管理する場合
 
-
-Macchinetta Server Framework 適用システムで、MyBatis3を使用して\ ``Repository``\ を実装している場合、
-\ ``RepositoryImpl``\ を実装する必要はない。
-サンプルでは、\ ``Repository``\ インタフェースに対してテストを作成しているが、
-MyBatis3によりMapperインタフェース（\ ``Repository``\）とマッピングファイルから自動生成された\ ``RepositoryImpl``\ が
-テスト対象となることに注意すること。
-詳細は、\ :ref:`repository-mybatis3-label`\ を参照されたい。
-
+DBUnitは主にデータベースをセットアップする機能と、検証する機能を提供している。DBUnitを使用することで、
+データ比較による結果の検証が効率的に実施できる。
 
 spring-testを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -410,12 +397,11 @@ Repositoryの単体テストは、JUnitを使用して実施する。
 
     * - 作成するファイル名
       - 説明
-    * - XxxRepositoryTest.java
-      - XxxRepository.javaのテストクラス
+    * - ReservationRepositoryTest.java
+      - ReservationRepository.javaのテストクラス。
     * - test-context.xml
-      - Repositoryの単体テストを行う際に使用する設定ファイル
-    * - route-dataset.sql
-      - テストで使用する初期データファイル
+      - spring-testを使用したRepositoryの単体テストを行う際に使用する設定ファイル。
+        本節で説明する内容はあくまで参考例のため、業務要件に合わせて設定ファイルを用意すること。
     * - schema.sql
       - テスト用のDDLファイル
 
@@ -868,13 +854,15 @@ Repositoryテストの実装(DBUnitと連携する場合)
 
 .. note:: **DBUnitのExcelバージョンについて★★**
 
-    DBUnitでは、FlatXML以外にExcel形式（.xlsx）のデータ定義ファイルをテストデータや期待結果データとして用いることが出来る。
+    DBUnitでは、FlatXML以外にExcel形式（.xlsx）またはCSV形式のデータ定義ファイルをテストデータや期待結果データとして
+    用いることが出来る。
 
-    spring-test-dbunitでは、データ定義ファイルの読込機能をDataSetLoaderというインタフェースを実装したクラスに委譲しており、
-    Excel形式のデータ定義ファイル読込ロジックを定義したDataSetLoaderを実装し、spring-test-dbunitが利用するように設定すれば
-    実現できる。
+    spring-test-dbunitでは、データ定義ファイルの読込機能を\ ``com.github.springtestdbunit.dataset.DataSetLoader``\
+    というインタフェースを実装したクラスに委譲しており、Excel形式やCSV形式のデータ定義ファイル読込ロジックを定義した
+    \ ``DataSetLoader``\ を実装し、spring-test-dbunitが利用するように設定すれば実現できる。
+    詳細は、\ `Spring Test DBUnit <http://springtestdbunit.github.io/spring-test-dbunit/>`_\ を参照されたい。
 
-    以下、実装例を示す。
+    以下、Excel形式の場合の実装例を示す。★記載する？
 
     * XlsDataLoaderの実装
 
@@ -939,17 +927,17 @@ Serviceの単体テスト
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 20 20 60
+    :widths: 30 30 40
 
-    * - テストパターン
-      - 特徴
+    * - 使用するテストライブラリ(JUnit以外)
+      - 説明
       - 使い分けの方針
     * - spring-test
-      - 基本??★
+      - テスト済みのRepositoryを使用してServiceをテストする。
       - 依存クラスがテスト済みでモック化する必要がない場合
-    * - Junit + Mockito
-      - 基本??★
-      - モック化が必要な場合
+    * - Mockito
+      - Repositoryをモック化してServiceをテストする。
+      - 依存クラスのモック化が必要な場合
 
 Serviceの単体テストについては、JUnitを使用して\ ``Service``\ クラスの実装クラス（\ ``ServiceImpl``\）に対して
 試験を実施する。テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスを
@@ -1059,9 +1047,35 @@ Serviceテストの実装
 Controllerの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 30 30 40
+
+    * - 使用するテストライブラリ(JUnit以外)
+      - 説明
+      - 使い分けの方針
+    * - spring-test + mockMvc
+      - テスト済みのService、Repositoryを使用してControllerをテストする。
+      - 依存クラスがテスト済みでモック化する必要がない場合
+    * - spring-test + mockMvc + mockito
+      - Service、Repositoryをモック化してControllerをテストする。
+      - 依存クラスのモック化が必要な場合
+
+
 Springは\ ``Controller``\ クラスを試験するためのサポートクラス
 (\ ``org.springframework.test.web.servlet.setup.MockMvcBuilders``\ など)を用意している。
 これらのクラスを利用することでJUnitから\ ``Controller``\ クラスのメソッドを実行して試験をすることができる。
+
+spring-test + MockMVCを使用した試験
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+概要
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+Controllerテストの実装
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 
 spring-test + MockMVC + Mockitoを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1247,16 +1261,18 @@ Serviceのモッククラスの作成方法については、\ :ref:`ImplementOf
 
                 // (1)
                 MockHttpSession mockSession = new MockHttpSession();
-
-                // (2)
                 mockSession.setAttribute("userId", "0001");
 
-                // (3)
+                // (2)
                 MockHttpServletRequestBuilder getRequest = MockMvcRequestBuilders.get(
                     "/checkSession").session(mockSession);
 
-                ResultActions results = mockMvc.perform(getRequest); // (4)
-
+                // (3)
+                ResultActions results = mockMvc.perform(getRequest);
+                
+                // (4)
+                results1.andExpect(request().sessionAttribute("userId", equalTo("0001")));
+                
                 // omitted
             }
 
@@ -1268,17 +1284,16 @@ Serviceのモッククラスの作成方法については、\ :ref:`ImplementOf
              * - 項番
                - 説明
              * - | (1)
-               - | セッションのモックを生成する。
+               - | セッションのモックを生成し、オブジェクトを格納する。
              * - | (2)
-               - | (1)で生成したモックセッションにオブジェクトを格納する。
-             * - | (3)
                - | セッションを登録したリクエストのモックを生成する。
                  | \ ``org.springframework.test.web.servlet.request.MockMvcRequestBuilders``\ の\ ``get``\ メソッドで
-                   リクエストのモックを生成し、生成したリクエストに\ ``session``\ メソッドでセッションのモックを登録する。
-                   例では\ ``/checkSession``\へのGETリクエストにセッションのモックを登録している。
-             * - | (4)
+                   リクエストのモックを生成し、生成したリクエストに\ ``session``\ メソッドでセッションのモックを
+                   登録する。例では\ ``/checkSession``\へのGETリクエストにセッションのモックを登録している。
+             * - | (3)
                - | \ ``MockMvc``\ にリクエストを渡してコントローラのメソッドを実行する。
-                   結果の確認方法は\ ``@AuthenticationPrincipal``\ アノテーションを利用している場合を参照。 
+             * - | (4)
+               - | セッションに格納されていることを確認する。
 
 |
 
@@ -1297,14 +1312,17 @@ Validatorの単体テスト
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 40 60
+    :widths: 30 30 40
 
-    * - テストパターン
-      - 特徴
-    * - BeanValidation
-      - カスタムバリデーションのテスト
-    * - SpringValidation
-      - 相関項目チェックのテスト
+    * - 使用するテストライブラリ(JUnit以外)
+      - 説明
+      - 使い分けの方針
+    * - -（JUnitのみ）
+      - カスタムバリデーションをテストする。
+      - BeanValidationを使用している場合
+    * - -（JUnitのみ）
+      - 相関項目チェックをテストする。
+      - SpringValidationを使用している場合
 
 JUnitを使用した試験（Bean Validation）
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
