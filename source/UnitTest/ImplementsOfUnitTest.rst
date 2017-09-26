@@ -975,7 +975,8 @@ Repositoryテストの実装(DBUnitと連携する場合)
 
     * Excel形式のデータ定義ファイルの作成
 
-     ../_images/xlsxdataset.png 
+     .. figure:: ./images/UnitTestExcelFile.png
+        :width: 70%
 
     Excel形式のデータ定義ファイルでは、各シートが各テーブルに対応する。
     シート名にはテーブル名、シートの一行目にはカラム名を設定する。 二行目以降にテーブルに挿入されるデータを記述する。
