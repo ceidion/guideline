@@ -8,10 +8,7 @@
 Overview
 --------------------------------------------------------------------------------
 
-コンポーネントテストの実行環境について
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-テストの実行方法を以下に示す。
+単体テストの実行方法を以下に示す。
 
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
@@ -40,7 +37,7 @@ Overview
 
 なお、\ **本ガイドラインでは、Spring Tool Suite を用いたJUnitの実行方法を紹介する。** \
 
-使用するIDEによっては画像と異なった画面表示になることを留意されたい。
+使用するIDEによっては画像と異なる画面表示になることを留意されたい。
 
 IDE上でテストを実行
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -103,7 +100,7 @@ JUnitの実行はプロジェクト単位、メソッド単位でも可能であ
 
 |
 
-メソッド単位で実行する場合、テストしたいメソッドを右クリックしてメニューを表示させる。
+メソッド単位で実行する場合は、テストしたいメソッドを右クリックしてメニューを表示させる。
 
 .. figure:: ./images/UnitTestIdeClickTestMethod.png
 
@@ -115,7 +112,7 @@ JUnitの実行はプロジェクト単位、メソッド単位でも可能であ
 
 |
 
-クラスメソッド単位で実行した場合は、選択したクラスメソッドの実行結果のみが表示される。
+メソッド単位で実行した場合は、選択したクラスメソッドの実行結果のみが表示される。
 
 .. figure:: ./images/UnitTestIdeSuccessMethodJunit.png
 
@@ -139,22 +136,70 @@ maven で単体テストを実行する場合、以下のコマンドを実行�
 
 \ ``target/surefire-reports``\ 配下にテスト結果が作成される。
 
-デフォルトでは、以下のパターンにマッチするファイルがテストされる。（JUnit4要確認）
+デフォルトでは、以下のパターンにマッチするファイルがテストされる。
 
-* \ ``**/Test*.java``\ （実行確認）
-* \ ``**/*Test.java``\ （実行確認）
-* \ ``**/*TestCase.java``\ （実行確認）
+* \ ``**/Test*.java``\ 
+* \ ``**/*Test.java``\ 
+* \ ``**/*Tests.java``\ 
+* \ ``**/*TestCase.java``\ 
 
-以下のパターンにマッチするファイルはデフォルトで除外される。（JUnit4要確認）
+上記パターンにマッチしないテストクラスを実行させたい場合は、
 
-* \ ``**/Abstract*Test.java``\ （除外確認できず）
-* \ ``**/Abstract*TestCase.java``\ （除外確認できず）
-* \ ``**/*$*``\ （$は行末に該当する文字列があるかという意味） （除外確認）
+\ ``pom.xml``\ に設定を追加することでデフォルトの動作を変更することができる。
+
+また、除外ファイルの指定も設定することも可能である。
+
+.. code-block:: xml
+
+    <project>
+
+      // ommited
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.20.1</version>
+            <configuration>
+              <includes>
+                <include>*Sample.java</include> <!-- (1) -->
+              </includes>
+              <excludes>
+                <exclude>TestSample.java</exclude> <!-- (2) -->
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+
+      // ommited
+
+    </project>
+
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | \ ``<include>``\ にファイルを指定し、テスト実行時にデフォルトで読み込まれるファイルを変更する。
+    * - | (2)
+      - | \ ``<exclude>``\ にファイルを指定し、テスト実行時に除外されるファイルを設定する。
+
+.. note::
+
+    対象を指定する際には、正規表現を使って指定することもできる。
+    詳細は \ `maven-surefire-plugin (Regular Expression Support) <https://maven.apache.org/surefire/maven-surefire-plugin/examples/inclusion-exclusion.html>`_\ を参照されたい。
+
 
 任意のクラス、メソッドを実行
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-\ ``maven test``\ コマンドはオプションを用いることで任意のクラス、メソッドを指定して実行することもできる。
+\ ``maven test``\ コマンドはオプションを用いることで任意のクラス、メソッドを指定し実行することもできる。
 
 テスト対象のクラスを指定する場合は、以下のコマンドを用いて指定できる。
 
@@ -183,13 +228,7 @@ maven で単体テストを実行する場合、以下のコマンドを実行�
 .. warning::
 
     メソッド単位の指定は \ ``maven-surefire-plugin``\ のバージョンが2.7.3以上必要となる。
-    詳細は \ ``maven-surefire-plugin``\ の\ `公式ページ <http://maven.apache.org/surefire/maven-surefire-plugin/examples/single-test.html>`_\を参照されたい。
-
-これらの実行対象の絞込みにはワイルドカード（*）を使うこともできる。
-
-例えば、\ ``insertATest.java``\ 、\ ``insertBTest.java``\ 、\ ``updateATest.java``\ が存在するとき、
-
-\ ``insert*Test``\ と指定した場合には、\ ``insertATest.java``\ と \ ``insertBTest.java``\ が実行される。
+    詳細は \ `maven-surefire-plugin (Running a Set of Methods in a Single Test Class) <http://maven.apache.org/surefire/maven-surefire-plugin/examples/single-test.html>`_\ を参照されたい。
 
 .. note::
 
