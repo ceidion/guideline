@@ -175,6 +175,8 @@ OSSのバージョン★
 本章では、テストクラス実行時にテストデータをデータベース上に用意することを前提として、テスト用テーブルの作成方法および
 テストデータの初期化方法について説明する。
 
+.. _CreateTableforTest:
+
 テスト用テーブルの作成方法
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -183,6 +185,8 @@ OSSのバージョン★
 テスト用のテーブルは、テスト用のコンテキストファイルに\ ``<jdbc:initialize-database>``\ を定義することで
 テストクラス実行時にテスト用コンテキストファイルを読み込むことでテスト用のRDBMSのテーブル定義(DDL文)や
 データ操作(DML文)を発行してデータベースを初期化することができる。
+なお、\ ``<jdbc:initialize-database>``\ を使用して作成したテーブルと初期化データは実行後にコミットされるため、
+テスト終了後もデータベースの状態は戻らないことに注意されたい。
 
 設定例を以下に示す。
 
@@ -222,8 +226,8 @@ OSSのバージョン★
           例では、Apache Commons DBCPから提供されているデータソースクラス
           (\ ``org.apache.commons.dbcp2.BasicDataSource``\ )を指定する。
     * - | (2)
-      - | テスト用データベースを作成するためのDDL文が記載されているSQLファイルを指定する。
-        | 初期投入データがある場合、DML文を指定することも可能である。
+      - | 実行するSQLスクリプトの場所をscriptタグの\ ``location``\ 、SQLスクリプトファイルの文字コードを\ ``encoding``\ 
+          に指定する。試験共通データがある場合、試験共通データ挿入用のDML文を指定することも可能である。
 
 
 * ``RouteRepositoryTest.java``
@@ -252,6 +256,9 @@ OSSのバージョン★
       - | \ ``@ContextConfiguration``\ アノテーションにテスト用の設定ファイルを指定することによって、テストを行う際は
           テスト用の設定ファイルを読み込むようにできる。classpathを指定することによって、resource直下を参照できる。
 
+.. warning::
+
+   \ ``<jdbc:initialize-database>``\ タグに設定するSQLスクリプトには、明示的に「COMMIT;」を記述すること。
 
 テスト用データの追加方法
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -386,6 +393,8 @@ Repositoryの単体テストは、JUnitを使用して実施する。
 データアクセスを行う。
 また、Repositoryの単体テストを行う際は単体テスト用の設定ファイルを用意すること。
 
+データのセットアップを行う方法については、\ :ref:`SetUpOfTestingData`\ を参照されたい。
+
 作成するファイル例を以下に示す。
 
 .. figure:: ./images/UnitTestRepositorySpringTestItems.png
@@ -402,8 +411,6 @@ Repositoryの単体テストは、JUnitを使用して実施する。
     * - test-context.xml
       - spring-testを使用したRepositoryの単体テストを行う際に使用する設定ファイル。
         本節で説明する内容はあくまで参考例のため、業務要件に合わせて設定ファイルを用意すること。
-    * - schema.sql
-      - テスト用のDDLファイル
 
 .. _TestGuideSettingOfSpringTest:
 
@@ -451,8 +458,8 @@ spring-testを使用するための設定
 
       <!-- (2) -->
       <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
-        <property name="dataSource" ref="dataSource" />
-        <property name="typeAliasesPackage" value="jp.co.ntt.atrs.domain.model, jp.co.ntt.atrs.domain.repository" />
+          <property name="dataSource" ref="dataSource" />
+          <property name="configLocation" value="classpath:/META-INF/mybatis/mybatis-config.xml" />
       </bean>
 
       <!-- (3) -->
@@ -475,7 +482,6 @@ spring-testを使用するための設定
       <tx:annotation-driven />
 
       <!-- (7) -->
-      <context:annotation-config />
       <context:component-scan base-package="jp.co.ntt.atrs.domain.repository" />
 
     </beans>
@@ -515,26 +521,25 @@ Repositoryテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Repositoryの単体テストクラスの作成方法を説明する。
+テストテーブルのセットアップ、データの初期化は設定ファイル読み込み時に
 
-* ``RouteRepositoryTest.java``
+* ``ReservationRepositoryTest.java``
 
 .. code-block:: java
 
     @RunWith(SpringJUnit4ClassRunner.class)
     @ContextConfiguration(locations = {
-            "classpath:META-INF/spring/test-context.xml" })
+            "classpath:META-INF/spring/test-context-ReservationRepositoryTest.xml" })
     @Transactional // (1)
-    @Rollback // (2)
-    public class RouteRepositoryTest {
+    public class ReservationRepositoryTest {
 
         @Inject
-        RouteRepository target; // (3)
+        ReservationRepository target; // (2)
 
         @Inject
-        JdbcTemplate jdbctemplate; // (4)
+        JdbcTemplate jdbctemplate; // (3)
 
         // ommited
-
     }
 
 .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
@@ -546,21 +551,33 @@ Repositoryの単体テストクラスの作成方法を説明する。
       - 説明
     * - | (1)
       - | \ ``@Transactional``\ アノテーションを付与する。
-        | テストクラスに\ ``@Transactional``\ アノテーションを宣言することで、テストクラスが持つテストメソッドは
-          トランザクション制御の対象となる。
+        | クラスレベルに\ ``@Transactional``\ アノテーションを付与することで、トランザクション境界が各テストメソッドの前
+          に移動するため、テスト終了時にロールバックされるようになる。
+          これによって、テストの実行によるDBの内容の変更を防ぐことができる。
     * - | (2)
-      - | \ ``@Rollback``\ アノテーションを付与する。
-        | テストクラスに\ ``@Rollback``\ アノテーションを宣言することで、各テストメソッドの終了時にトランザクションが
-          ロールバックされるようになる。これによって、テストの実行によるDBの内容の変更を防ぐことができる。
-    * - | (3)
       - | 試験対象のクラスをインジェクションする。
-        | 試験対象である\ ``RouteRepository``\ クラスをインジェクションする。
-    * - | (4)
+        | 試験対象である\ ``ReservationRepository``\ クラスをインジェクションする。
+    * - | (3)
       - | \ ``JdbcTemplate``\ クラスをインジェクションする。
         | \ ``JdbcTemplate``\ とはSpring JDBCサポートのコアクラスである。JDBC APIではデータソースからコネクションの取得、
           PreparedStatementの作成、ResultSetの解析、コネクションの解放などを行う必要があるが、\ ``JdbcTemplate``\ 
           を使うことでこれらの処理の多くが隠蔽され、より簡単にデータアクセスを行うことができる。
           DBUnitを使用しない場合は、\ ``JdbcTemplate``\ を使用してテストデータの投入を行うことを推奨する。
+
+
+.. note:: **テスト用のトランザクション制御**
+
+    \ ``@Sql``\ を使用してテストデータをセットアップする場合、デフォルトではテストデータをセットアップする際の
+    トランザクションと、テストメソッド実行でデータアクセスする際のトランザクションは別々となる。
+    テストデータをセットアップした後に一度コミットが行われ、テストメソッド実行後にデータアクセスがある場合は
+    もう一度コミットが行われる。
+    そのため、タイミングによってはテストメソッド実行前とデータベースの状態が変わっている可能性があることに注意されたい。
+    
+    なお、\ ``@Transactional``\ を付与することで、同一トランザクション内でテストデータのセットアップと
+    テストメソッド実行を行うことができる。
+    \ ``@Transactional``\ はデフォルトでテストメソッド実行後にロールバックされる。
+    \ ``@Transactional``\ をクラスレベルで指定すると、指定したテストクラス全てのテストメソッドに対して
+    トランザクション境界をテストメソッド単位に移動することができる。
 
 .. note:: **ロールバックを実施しない場合について**
 
@@ -582,21 +599,6 @@ Repositoryの単体テストクラスの作成方法を説明する。
 
 |
 
-.. note:: **テスト用のトランザクション制御**
-
-    \ ``@Sql``\ を使用してテストデータをセットアップする場合、デフォルトではテストデータをセットアップする際の
-    トランザクションと、テストメソッド実行時にデータアクセスする際のトランザクションは別々となる。
-    そのため、テストデータをセットアップした後に一度コミットが行われ、テストメソッド実行後にデータアクセスがある場合は
-    もう一度コミットが行われる。
-    そのため、テストメソッド実行前にデータベースの状態が変わっている可能性があることに注意されたい。
-    
-    なお、\ ``@Transactional``\ を付与することで、同一トランザクション内でテストデータのセットアップと
-    テストメソッド実行を行うことができる。
-    \ ``@Transactional``\ はデフォルトでテストメソッド実行後にロールバックされる。
-    \ ``@Transactional``\ をクラスレベルで指定すると、指定したテストクラス全てのテストメソッドに対して
-    トランザクション境界をテストメソッド単位にいどうすることができる。
-
-
 .. note:: **JdbcTemplateの使い方(INSERT/UPDATE/DELETE文)**
 
     JdbcTemplateにて、INSERT/UPDATE/DELETE文を発行する際はupdateメソッドを使用する。
@@ -606,118 +608,74 @@ Repositoryの単体テストクラスの作成方法を説明する。
 
 |
 
-参照系のテストメソッドの作成例を以下に示す。
+テストメソッドの作成例を以下に示す。
 
-* ``RouteRepositoryTest.java``
-
-.. code-block:: java
-
-    package jp.co.ntt.atrs.domain.repository.route;
-
-    @Test
-    public void testFindAll() {
-
-        // (1)
-        List<Route> routeList = target.findAll();
-
-        // (2)
-        assertEquals(routeList.size(), 2);
-
-        // (3)
-        assertEquals(routeList.get(0).getRouteNo().intValue(), 1);
-        assertEquals(routeList.get(1).getRouteNo().intValue(), 2);
-        assertEquals(routeList.get(0).getBasicFare().intValue(), 30600);
-        assertEquals(routeList.get(1).getBasicFare().intValue(), 40700);
-
-        Airport DepAirport_0 = routeList.get(0).getDepartureAirport();
-        Airport DepAirport_1 = routeList.get(1).getDepartureAirport();
-        Airport ArrAirport_0 = routeList.get(0).getArrivalAirport();
-        Airport ArrAirport_1 = routeList.get(1).getArrivalAirport();
-
-        assertEquals(DepAirport_0.getCode(), "HND");
-        assertEquals(DepAirport_0.getName(), "東京（羽田）");
-        assertEquals(DepAirport_1.getCode(), "HND");
-        assertEquals(DepAirport_1.getName(), "東京（羽田）");
-
-        assertEquals(ArrAirport_0.getCode(), "ITM");
-        assertEquals(ArrAirport_0.getName(), "大阪（伊丹）");
-        assertEquals(ArrAirport_1.getCode(), "MBE");
-        assertEquals(ArrAirport_1.getName(), "オホーツク紋別");
-    }
-
-
-.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
-.. list-table::
-    :header-rows: 1
-    :widths: 10 90
-
-    * - 項番
-      - 説明
-    * - | (1)
-      - | テスト対象メソッドを実行する。
-    * - | (2)
-      - | 期待した結果件数が返却されることの確認する。
-    * - | (3)
-      - | 期待した結果が取得できていることを確認する。
-
-
-更新系のテストメソッドの作成例を以下に示す。
-
-* ``RouteRepositoryTest.java``
+* ``ReservationRepositoryTest.java``
 
 .. code-block:: java
 
-    package jp.co.ntt.atrs.domain.repository.member;
+    package jp.co.ntt.atrs.domain.repository.reservation;
 
     @Test
-    public void testUpdate() {
+    public void insertTest() {
 
         // (1)
-        MemberLogin memberLogin = new MemberLogin();
-        String updatePW = "update";
-        memberLogin.setPassword(updatePW);
+        Reservation reservation = new Reservation();
+        reservation.setReserveNo("0000000001");
+
         // omitted
 
         Member member = new Member();
-        String updateMemShipNum = "08";
-        member.setMembershipNumber(updateMemShipNum);
-        // omitted
-        member.setMemberLogin(memberLogin);
+        member.setMembershipNumber("0000000001");
+        reservation.setRepMember(member);
+
 
         // (2)
-        int actualNum = target.updateMemberLogin(member);
+        int actInsert = target.insert(reservation);
 
         // (3)
-        assertEquals(actualNum, 1);
+        assertEquals(actInsert, 1);
 
-        // (4)
-        String cntSql = "SELECT COUNT(*) FROM member_login";
-        int resultCnt = jdbctemplate.queryForObject(cntSql, Integer.class);
-        assertEquals(resultCnt, 10);
+        assertDB(reservation.getReserveNo(), reservation);
+    }
+    
+    private void assertDB(String reserveNo, Reservation exReservation) {
 
-        // (5)
-        String sql = "SELECT customer_no, password FROM member_login WHERE customer_no = '08'";
-        List<Member> actualList = jdbctemplate.query(sql,
-                new MemberRowMapper());
-        Member actualMember = actualList.get(0);
-        assertEquals(actualMember.getMembershipNumber(), updateMemShipNum);
-        assertEquals(actualMember.getMemberLogin().getPassword(), updatePW);
+        Reservation actReservation = getReservation(reserveNo);
+
+        assertEquals(actReservation.getReserveNo(), exReservation
+                .getReserveNo());
+
+        // omitted
     }
 
-    // (6)
-    private static class MemberRowMapper implements RowMapper<Member> {
+    private Reservation getReservation(String reserveNo) {
 
-        @Override
-        public Member mapRow(ResultSet rs, int rowNum) throws SQLException {
-            Member m = new Member();
-            MemberLogin ml = new MemberLogin();
+        // (4)
+        String sql = "SELECT * FROM reservation WHERE reserve_no=?";
+        Reservation reservation = (Reservation) jdbctemplate.queryForObject(sql,
+                new Object[] { reserveNo }, new RowMapper<Reservation>() {
 
-            m.setMembershipNumber(rs.getString("CUSTOMER_NO"));
-            ml.setPassword(rs.getString("PASSWORD"));
-            m.setMemberLogin(ml);
+                    // (5)
+                    public Reservation mapRow(ResultSet rs,
+                            int rowNum) throws SQLException {
 
-            return m;
-        }
+                        Reservation dbReservation = new Reservation();
+
+                        dbReservation.setReserveNo(rs.getString("reserve_no"));
+
+                        // omitted
+
+                        Member member = new Member();
+                        member.setMembershipNumber(rs.getString(
+                                "rep_customer_no"));
+                        dbReservation.setRepMember(member);
+
+                        return dbReservation;
+                    }
+                });
+
+        return reservation;
     }
 
 .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
@@ -734,12 +692,10 @@ Repositoryの単体テストクラスの作成方法を説明する。
     * - | (3)
       - | 更新件数を確認する。
     * - | (4)
-      - | テスト対象メソッド実行後のテストデータ件数を取得し、変更がないことを確認する。
+      - | テスト対象メソッド実行後のテストデータを取得し、データが挿入されていることを確認する。
     * - | (5)
-      - | テスト対象メソッド実行後のテストデータを取得し、変更されていることを確認する。
-    * - | (6)
       - | RowMapperを使用することで、DBから取得した\ ``ResultSet``\ を特定のPOJOクラス（\ ``Member``\クラスと
-          \ ``MemberLogin``\ クラス）にマッピングすることができる。
+          \ ``Reservation``\ クラス）にマッピングすることができる。
 
 
 spring-testとDBUnitを使用した試験
@@ -751,10 +707,10 @@ spring-testとDBUnitを使用した試験
 データアクセスにDBUnitを使用する場合のRepositoryの単体テスト実装方法について説明する。
 
 DBUnitとは、データベースに依存するクラスのテストを行うためのJUnit拡張フレームワークである。
-以下のような機能を利用することで試験工数を削減できるため、基本的にはDBUnitを用いて実装することを推奨する。
+テスト実行後のデータベースの状態の検証機能を使用することで試験工数を削減できるため、基本的にはDBUnitを用いて
+実装することを推奨する。
 
- * 事前のテストデータのセットアップ機能
- * テスト実施後の期待結果データとの比較によるデータベースの状態の検証機能
+データのセットアップはDBUnitが提供している機能を用いて行う。
 
 DBUnitを利用したRepositoryの単体テストにおいて、作成するファイルを以下に示す。
 
@@ -767,22 +723,14 @@ DBUnitを利用したRepositoryの単体テストにおいて、作成するフ�
 
     * - 作成するファイル名
       - 説明
-    * - XxxRepositoryTest.java
-      - XxxRepository.javaのテストクラス(DBUnitと連携する場合)
-    * - test-context-dbunit.xml
+    * - MemberRepositoryTest.java
+      - MemberRepository.javaのテストクラス(DBUnitと連携する場合)
+    * - test-context-MemberRepositoryTest.xml
       - Repositoryの単体テストを行う際に使用する設定ファイル(DBUnitと連携する場合)
-    * - afterdelete_data.xml
-      - 削除のテスト実行後の期待結果データファイル
-    * - afterinsert_data.xml
-      - 登録のテスト実行後の期待結果データファイル
-    * - afterupdate_data.xml
-      - 更新のテスト実行後の期待結果データファイル
-    * - test_data.xml
-      - テストで使用する試験前提条件データファイル
-    * - route-dataset.sql
-      - テストで使用する初期データファイル
-    * - schema.sql
-      - テスト用のDDLファイル
+    * - test_data_member.xml
+      - テストデータセットアップ用ファイル
+    * - afterupdate_data_member.xml
+      - テスト後DB検証用xmlファイル
 
 .. _TestGuideSettingOfDbUnit:
 
@@ -812,7 +760,6 @@ RepositoryのDBUnitを利用した単体テストのための設定ファイル�
     * - | (1)
       - | データソースのクラスを\ ``TransactionAwareDataSourceProxy``\ のbeanにすることで、
            DBUnitをSpringのトランザクション管理下にすることができる。
-
 
 Repositoryテストの実装(DBUnitと連携する場合)
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -844,7 +791,8 @@ Repositoryテストの実装(DBUnitと連携する場合)
     * - 項番
       - 説明
     * - | (1)
-      - | \ :ref:`TestGuideSettingOfDbUnit`\ で作成した設定ファイルを読み込む
+      - | \ :ref:`TestGuideSettingOfDbUnit`\ で作成した設定ファイルを読み込む。
+          
     * - | (2)
       - | \ ``org.dbunit.DataSourceBasedDBTestCase``\ を継承する。
     * - | (3)
@@ -958,8 +906,6 @@ spring-testを使用した試験
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-・フォルダ構成の図★
-
 テスト済みの\ ``Repository``\ クラスを使用する場合、DBUnitを使用して\ ``Repository``\ クラスをインジェクションして
 テスト対象の\ ``ServiceImpl``\ クラスのテスト作成方法を説明する。
 
@@ -991,8 +937,6 @@ JunitとMockitoを使用した試験
 
 概要
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-・フォルダ構成の図★
 
 \ ``Repository``\ クラスなど\ ``ServiceImpl``\ クラスが依存するクラスをモック化する場合のテスト作成方法を説明する。
 
@@ -1338,8 +1282,6 @@ Validator(Bean Validation)の単体テストについては、JUnitを使用し�
 
 .. figure:: ./images/UnitTestBeanValidationItems.png
 
-・フォルダ構成の図
-
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
     :header-rows: 1
@@ -1415,8 +1357,6 @@ Validator(Spring Validation)の単体テストについては、JUnitを使用�
 作成するファイルを以下に示す。
 
 .. figure:: ./images/UnitTestSpringValidationItems.png
-
-・フォルダ構成の図
 
 .. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
