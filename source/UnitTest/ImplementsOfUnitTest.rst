@@ -730,7 +730,7 @@ DBUnitを利用したRepositoryの単体テストにおいて、作成するフ�
     * - test_data_member.xml
       - テストデータセットアップ用ファイル
     * - afterupdate_data_member.xml
-      - テスト後DB検証用xmlファイル
+      - テストの期待結果検証用ファイル
 
 .. _TestGuideSettingOfDbUnit:
 
@@ -769,19 +769,25 @@ Repositoryテストの実装(DBUnitと連携する場合)
 .. code-block:: java
 
     @RunWith(SpringJUnit4ClassRunner.class)
-    @ContextConfiguration(locations = { "classpath*:META-INF/spring/test-context-dbunit.xml" }) // (1)
+    @ContextConfiguration(locations = {
+            "classpath:META-INF/spring/test-context-MemberRepositoryTest.xml" }) // (1)
+    @TestExecutionListeners({                                                    // (2)
+            DependencyInjectionTestExecutionListener.class,                      // (3)
+            DirtiesContextTestExecutionListener.class,                           // (4)
+            TransactionDbUnitTestExecutionListener.class,                        // (5)
+            SqlScriptsTestExecutionListener.class })                             // (6)
     @Transactional
-    public class RouteRepositoryDbUnitTest extends DataSourceBasedDBTestCase { //(2)
-
-        // omitted
+    public class MemberRepositoryTest {
 
         @Inject
-        DataSource dataSource;  //(3)
+        MemberRepository target;
 
-        @Before
-        public void setUp() throws Exception {
-            super.setUp();
-        }
+        @Inject
+        JdbcTemplate jdbctemplate;
+
+         // omitted
+    }
+
 
 .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
 .. list-table::
@@ -794,9 +800,96 @@ Repositoryテストの実装(DBUnitと連携する場合)
       - | \ :ref:`TestGuideSettingOfDbUnit`\ で作成した設定ファイルを読み込む。
           
     * - | (2)
-      - | \ ``org.dbunit.DataSourceBasedDBTestCase``\ を継承する。
+      - | テストクラスに\ ``@TestExecutionListeners``\ を付与し、テスト実行関連のイベントに対するリスナを
+          追加することで、テスト実行関連のイベントを捕捉出来る。
     * - | (3)
-      - | \ ``javax.sql.DataSource``\ をインジェクションする。
+      - |  \ ``DependencyInjectionTestExecutionListener``\ は、テストインスタンスのDI機能を提供する。
+    * - | (4)
+      - | \ ``DirtiesContextTestExecutionListener``\ は、\ ``@DirtiesContext``\ アノテーションを処理する機能を
+          提供する。\ ``@DirtiesContext``\ は、コンテキストのキャッシュを破棄、リロードする機能を提供する。
+          詳細は、\ `@DirtiesContext <https://docs.spring.io/spring/docs/current/spring-framework-reference/html/integration-testing.html#__dirtiescontext>`_\
+          を参照されたい。
+    * - | (5)
+      - | \ ``TransactionDbUnitTestExecutionListener``\ は、同一トランザクション内でBUnitによるデータセットアップや
+          期待する結果の検証を行う機能を提供する。
+    * - | (6)
+      - | \ ``SqlScriptsTestExecutionListener``\ は、\ ``@Sql``\ アノテーションで設定されたSQLスクリプトを実行する
+          機能を提供する。
+
+テストメソッドの作成例を以下に示す。
+
+
+* ``RouteRepositoryDbUnitTest.java``
+
+.. code-block:: java
+
+    @Test
+    @DatabaseSetup("classpath:META-INF/dbunit/test_data_member.xml") // (1)
+    @ExpectedDatabase( // (2)
+            value = "classpath:META-INF/dbunit/afterupdate_data_member.xml", 
+            assertionMode = DatabaseAssertionMode.NON_STRICT)
+    public void updateTest() {
+
+        String customerNo = "0000000001";
+        Member member = createMember(customerNo);
+        member.setKanjiFamilyName("電信柱");
+
+        int actUpdate = target.update(member);
+
+        assertEquals(actUpdate, 1);
+    }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | spring-test-dbunitが提供する\ ``@DatabaseSetup``\ アノテーションにテストセットアップ用データファイルを
+          指定することで、テストメソッド実行前にDBUnitによって自動でデータベースのセットアップが行われる。
+        | 例のようにメソッドレベルにアノテーションを付与した場合、対象のテストメソッドに対してのみ有効になる。
+          クラスレベルに付与すると、対象のテストクラスに含まれる全てのテストメソッドで設定が有効になる。
+    * - | (2)
+      - | \ ``@ExpectedDatabase``\ アノテーションにテストの期待結果検証用ファイルを指定することでテストメソッド
+          実行後にDBUnitによってテーブルと期待結果データファイルが自動で比較検証される。
+        | \ ``@DatabaseSetup``\ アノテーション同様に、クラスレベルとメソッドレベルで付与できる。
+        | ファイルフォーマットはテストセットアップ用データファイルと同じである。\ ``assertionMode``\ 属性には、
+          以下の値が設定可能である。
+
+        * DEFAULT：全てのテーブルとカラムの一致を比較する
+        * NON_STRICT：期待結果データファイルに存在しないテーブル、カラムが実際のデータベースに存在しても無視する
+        * NON_STRICT_UNORDERED：NON_STRICTモードに加え、行の順序についても無視する
+
+* テストセットアップ用データファイルの作成
+
+試験前提条件データファイルは、FlatXMLと呼ばれる以下のフォーマットで作成する。
+
+.. code-block:: xml
+
+    <?xml version='1.0' encoding='UTF-8'?>
+    <dataset>
+        <!-- (1) -->
+        <MEMBER CUSTOMER_NO="0000000001" KANJI_FAMILY_NAME="電電" KANJI_GIVEN_NAME="花子" KANA_FAMILY_NAME="デンデン" KANA_GIVEN_NAME="ハナコ" BIRTHDAY="1979-01-25" GENDER="F" TEL="111-1111-1111" ZIP_CODE="1111111" ADDRESS="東京都港区港南Ｘ－Ｘ－Ｘ" MAIL="xxxxxx@ntt.co.jp" CREDIT_NO="1111111111111111" CREDIT_TYPE_CD="VIS" CREDIT_TERM="01/20" />
+        <MEMBER_LOGIN CUSTOMER_NO="0000000001" PASSWORD="$2a$10$AUvby7NA4i5MpFbks.lYd.pgUCv7Ze32FdnQFE03N4EeEePqVAH0C" LAST_PASSWORD="$2a$10$bJ8HB/5LaMN/ntOQHpgiAu8tfG1Y/rP21MaoK4RBenghxcbhrLW5C" LOGIN_DATE_TIME="2017-09-13 16:47:04.283" LOGIN_FLG="FALSE" />
+    </dataset>
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | \ ``dataset``\ 要素配下の各XML要素は、テーブルのレコードに対応しており、各XMLの要素名はテーブル名、
+          属性名はカラム名、属性値は投入するデータを定義する。
+
+.. warning:: **外部キー制約のあるテーブル**
+
+    外部キー制約のあるテーブルに対し、DBUnitを用いてDBの初期化をすると、参照条件によってはエラーが発生するため、
+    参照整合性を保つようにデータセットの順序を指定する必要があることに注意されたい。
 
 |
 
