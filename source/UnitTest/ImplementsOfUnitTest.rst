@@ -1190,6 +1190,10 @@ Serviceの単体テストクラスの作成方法を説明する。
 本節は、アプリケーション層の\ ``Controller``\ クラス、\ ``Helper``\ クラス、\ ``Form(Validation)``\ クラスに対する
 テストクラスの作成例を示す。
 
+インジェクションするクラスにモック用のダミークラスを別途用意してもよい。 ダミークラスの作成方法については、本章では説明を割愛する。 ダミークラスを作成せず、モック用ライブラリを使用する方法については、JunitとMockitoを使用した試験を参照されたい。
+
+テスト済みのRepositoryクラスを使用し、かつモック化も行いたい場合は、適宜以下に説明する実装方法を 組み合わせて実装されたい。
+
 なお、Viewについては単体テストの対象外とする。
 
 アプリケーション層のテスト対象のコンポーネントを以下に示す。
@@ -1226,15 +1230,151 @@ Springは\ ``Controller``\ クラスを試験するためのサポートクラ�
 spring-test + MockMVCを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
+テスト済みの\ ``ServiceImpl``\ クラスなどを使用する場合の\ ``Controller``\ クラスのテスト作成方法を説明する。
+
+作成するファイルを以下に示す。
+
+.. figure:: ./images/UnitTestControllerWebappcontextsetupItems.png
+
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 30 70
+
+    * - 作成するファイル名
+      - 説明
+    * - \ ``TicketSearchControllerThroughTest.java``\
+      - \ ``TicketSearchController.java``\ のテストクラス
+    * - \ ``test-context-TicketSearchControllerThroughTest.xml``\
+      - \ ``Controller``\ の単体テストを行う際に使用する設定ファイル。
+    * - \ ``test-mvc-TicketSearchControllerThroughTest.xml``\
+      - \ ``Controller``\ の単体テストを行う際に使用する設定ファイル。
+
 Controllerテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+\ ``ServiceImpl``\ クラスなどテスト対象の\ ``Controller``\ クラスが依存するクラスをインジェクションする場合の
+テスト作成方法を説明する。
+
+なお、テストデータのセットアップが必要であれば、DBUnitを使用する場合は\ :ref:`ImplementsOfRepositoryTestDbUnit`\ を、
+Spring JDBCを使用する場合は\ :ref:`SetUpOfTestingData`\ を参照されたい。
+
+* ``MemberRegisterControllerTest.java``
+
+.. code-block:: java
+
+    @RunWith(SpringJUnit4ClassRunner.class)
+    @ContextConfiguration({
+            "classpath:META-INF/spring/test-context-TicketSearchControllerThroughTest.xml",
+            "classpath:META-INF/spring/test-mvc-TicketSearchControllerThroughTest.xml" })
+    @WebAppConfiguration                              // (1)
+    public class TicketSearchControllerThroughTest {
+
+        @Inject
+        TicketSearchController target;
+
+        @Inject
+        JodaTimeDateFactory dateFactory;
+
+        // (2)
+        MockMvc mockMvc;
+
+        @Before
+        public void setUp() throws Exception {
+
+            // (3)
+            mockMvc = MockMvcBuilders.standaloneSetup(target).build();
+
+        }
+
+        // omitted
+
+    }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | \ ``@WebAppConfiguration``\を指定することによって、テストケース中で\ ``WebApplicationContext``\オブジェクトを利用できるようになる。
+    * - | (2)
+      - | MockMvcはコントローラの試験用にSpringが提供しているクラスである。
+        | コントローラの試験は直接コントローラのメソッドを実行するのではなく、MockMvcにHttpリクエストのモックを渡して実行する。
+    * - | (3)
+      - | テスト対象のControllerを指定して、MockMvcを生成する。
+
+* ``MemberRegisterControllerTest.java``
+
+.. code-block:: java
+
+    @Test
+    public void testSearchForm() throws Exception {
+
+        // (1)
+        MockHttpServletRequestBuilder getRequest = MockMvcRequestBuilders.get("/ticket/search").param("form", "");
+
+        // (2)
+        ResultActions results = mockMvc.perform(getRequest);
+
+        // (3)
+        results.andDo(print());
+        results.andExpect(status().isOk());
+        results.andExpect(view().name("B1/flightSearch"));
+        results.andExpect(model().attribute("ticketSearchForm", instanceOf(TicketSearchForm.class)));
+        results.andExpect(model().attribute("flightSearchOutputDto", instanceOf(FlightSearchOutputDto.class)));
+
+        // (4)
+        ModelAndView mav = results.andReturn().getModelAndView();
+
+        TicketSearchForm actForm = (TicketSearchForm) mav.getModel().get("ticketSearchForm");
+        TicketSearchForm expForm = createExpForm();
+
+        assertEquals(actForm.getFlightType(), expForm.getFlightType());
+
+        // omitted
+
+    }
+
+    // (5)
+    private TicketSearchForm createExpForm() throws Exception {
+
+        TicketSearchForm ticketSearchForm = new TicketSearchForm();
+
+        // omitted
+
+        return ticketSearchForm;
+    }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | \ ``MockHttpServletRequestBuilder``\はコントローラの試験用にSpringが提供しているクラスである。
+        | \ ``MockHttpServletRequestBuilder``\を使用することで、テスト用に任意のリクエストデータをセットアップできる。
+    * - | (2)
+      - | \ ``ResultActions``\はコントローラの試験で実行結果を検証するためにSpringが提供しているクラスである。
+        | \ ``MockMvc``\のperformメソッドを呼び出し、\ ``DispatcherServlet``\にリクエストを行うことでテストを実行する。
+          performメソッドの引数には、(1)でセットアップしたリクエストデータを渡す。
+    * - | (3)
+      - | performメソッドから返却された\ ``ResultActions``\のメソッドを呼び出し、実行結果の妥当性を検証する。
+          
+    * - | (4)
+      - | \ ``ResultActions``\から\ ``ModelAndView``\オブジェクトを取得することができる。
+        | \ ``ModelAndView``\オブジェクトからModelに格納されたオブジェクトを取得し、JUnitのassertメソッドを利用してその内容を確認する。
+    * - | (5)
+      - | Formの検証用オブジェクトを作成するために、プライベートメソッドを実装している。
 
 spring-test + MockMVC + Mockitoを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-\ ``Controller``\ がインジェクションしている\ ``Service``\ クラスはモック用ライブラリを使用する。
-Serviceクラスがテスト済みの場合は、テスト済みのServiceクラスを使用する。
+\ ``Controller``\ がインジェクションしている\ ``Service``\ クラスは、モック用ライブラリを使用してモック化する。
 
 作成するファイルを以下に示す。
 
@@ -1247,8 +1387,8 @@ Serviceクラスがテスト済みの場合は、テスト済みのServiceクラ
 
     * - 作成するファイル名
       - 説明
-    * - \ ``XxxControllerTest.java``\
-      - \ ``XxxController.java``\ のテストクラス
+    * - \ ``TicketSearchControllerTest.java``\
+      - \ ``TicketSearchController.java``\ のテストクラス
 
 Controllerテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1257,77 +1397,37 @@ Serviceのモッククラスの作成方法については、\ :ref:`ImplementOf
 
 ここでは、Controllerの単体テストクラスの作成方法を説明する。
 
-* ``MemberRegisterControllerTest.java``
+* ``TicketSearchControllerTest.java``
 
 .. code-block:: java
 
-    public class MemberRegisterControllerTest {
+    public class TicketSearchControllerTest {
 
+        // (1)
+        @Rule
+        public MockitoRule mockito = MockitoJUnit.rule();
+
+        // (2)
         @InjectMocks
-        MemberRegisterController target;
+        TicketSearchController target;
 
+        // (3)
+        @Mock
+        TicketSearchHelper ticketSearchHelper;
+
+        // (4)
         MockMvc mockMvc;
 
         @Before
         public void setUp() throws Exception {
 
-            // コントローラにモックをインジェクションする。
-            // なお、Mockオブジェクトの初期化には以下の方法でも可能。
-            // ・RunWith アノテーションに MockeitoJUnitRunner を指定する。
-            // ・JUnit の MethodRule を実装した MockitoRule を使う。(JUnit4.7以降)
-            MockitoAnnotations.initMocks(this); // 徹底入門スタイル (p.405参考)
+            when(ticketSearchHelper.createDefaultTicketSearchForm()).thenReturn(createMockForm());
 
-            // 試験対象コントローラからMockMvcを生成する。
-            this.mockMvc = MockMvcBuilders.standaloneSetup(target).build();
+            // (5)
+            mockMvc = MockMvcBuilders.standaloneSetup(target).build();
         }
 
-.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
-.. list-table::
-    :header-rows: 1
-    :widths: 10 90
-
-    * - 項番
-      - 説明
-    * - | (1)
-      - | 
-
-
-* ``MemberRegisterControllerTest.java``
-
-.. code-block:: java
-
-    package jp.co.ntt.atrs.app.c1;
-
-    @Test
-    public void testRegisterForm() throws Exception {
-        // Modelに格納するデータ
-        String birthMinDate = "BirthMinDate";
-        String birthMaxDate = "BirthMinDate";
-        
-        // Helperの動作を設定
-        when(memberHelper.getDateOfBirthMinDate()).thenReturn(birthMinDate);
-        when(memberHelper.getDateOfBirthMaxDate()).thenReturn(birthMaxDate);
-
-        // テストを実行し、HTTPステータスコード、遷移先JSPパス、Modelの妥当性を検証
-        ResultActions results = mockMvc.perform(
-                MockMvcRequestBuilders.get("/member/register")
-                .param("form", "form"))
-                .andExpect(status().isOk())
-                .andExpect(forwardedUrl("C1/memberRegisterForm"))
-                .andExpect(model().attributeHasNoErrors(memberRegisterFormName));
-
-        // Modelにオブジェクトが格納されていることを確認する。
-        results.andExpect(model().attribute(birthMinDateObjectName, isA(String.class)));
-        results.andExpect(model().attribute(birthMaxDateObjectName, isA(String.class)));
-
-        // Modelに格納されたオブジェクトを取得し確認する。
-        ModelAndView mav = results.andReturn().getModelAndView();
-        String actualDateOfBirthMinDate = (String) mav.getModel().get(
-                birthMinDateObjectName);
-        String actualDateOfBirthMaxDate = (String) mav.getModel().get(
-                birthMaxDateObjectName);
-        assertThat(actualDateOfBirthMinDate, equalTo(birthMinDate));
-        assertThat(actualDateOfBirthMaxDate, equalTo(birthMaxDate));
+        // omitted
     }
 
 .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
@@ -1338,8 +1438,79 @@ Serviceのモッククラスの作成方法については、\ :ref:`ImplementOf
     * - 項番
       - 説明
     * - | (1)
-      - | 
+      - | JUnitでMockitoを利用するために宣言する。
+          \ ``@Rule``\ により、後述のアノテーションベースのモックオブジェクトの初期化機能が利用可能になる。
+    * - | (2)
+      - | \ ``@InjectMocks``\ アノテーションをテスト対象としたい具象クラスに付与することで、対象クラスのインスタンスが
+          Mockitoによって自動的に代入され、さらに対象クラス内のクラスと、\ ``@Mock``\ アノテーションが付与されたクラス
+          が一致する場合、自動的にモックオブジェクトが代入される。
+    * - | (3)
+      - | \ ``@Mock``\ アノテーションをモック化したいクラスに付与することで、対象クラスのモックオブジェクトが
+          Mockitoによって自動的に代入される。モッククラスを別途定義する必要はない。
+    * - | (4)
+      - | 試験に使うMockMvcをフィールドで宣言する。
+    * - | (5)
+      - | テスト対象のControllerを指定して、MockMvcを生成する。
 
+
+* ``TicketSearchControllerTest.java``
+
+.. code-block:: java
+
+    @Test
+    public void testSearchForm() throws Exception {
+
+        // (1)
+        MockHttpServletRequestBuilder getRequest = MockMvcRequestBuilders.get("/ticket/search").param("form", "");
+
+        // (2)
+        ResultActions results = mockMvc.perform(getRequest);
+
+        // (3)
+        results.andDo(print());
+        results.andExpect(status().isOk());
+        results.andExpect(view().name("B1/flightSearch"));
+        results.andExpect(model().attribute("ticketSearchForm", instanceOf(TicketSearchForm.class)));
+        results.andExpect(model().attribute("flightSearchOutputDto", instanceOf(FlightSearchOutputDto.class)));
+
+        // (4)
+        ModelAndView mav = results.andReturn().getModelAndView();
+
+        TicketSearchForm actForm = (TicketSearchForm) mav.getModel().get("ticketSearchForm");
+        TicketSearchForm expForm = createMockForm();
+
+        assertEquals(actForm.getFlightType(), expForm.getFlightType());
+
+        // omitted
+    }
+
+    // (5)
+    private TicketSearchForm createMockForm() throws Exception {
+
+        TicketSearchForm ticketSearchForm = new TicketSearchForm();
+
+        // omitted
+
+        return ticketSearchForm;
+    }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | テスト用に任意のリクエストデータをセットアップする。
+    * - | (2)
+      - | performメソッドの引数に、(1)でセットアップしたリクエストデータを渡しテストを実行する。
+    * - | (3)
+      - | performメソッドから返却された\ ``ResultActions``\のメソッドを呼び出し、実行結果の妥当性を検証する。
+    * - | (4)
+      - | \ ``ResultActions``\から\ ``ModelAndView``\オブジェクトを取得し、JUnitのassertメソッドを利用してModelの中身を確認する。
+    * - | (5)
+      - | Formの検証用オブジェクトを作成するために、プライベートメソッドを実装している。
 
 .. note:: **@AuthenticationPrincipalアノテーションを利用している場合**
 
@@ -1564,7 +1735,7 @@ Validator(Bean Validation)のテストクラスとして、\ ``FullWidthKatakana
       - | getValidatorメソッドにより、Validatorを取得する。
         | Validatorを取得することで、validateメソッドを使った入力チェックが可能となる。
     * - | (5)
-      - | 入力チェックアノテーションを使用したBeanクラスをインスタンス化する。
+      - | 入力チェックアノテーションを使用したJavaBeanクラスをインスタンス化する。
     * - | (6)
       - | validateメソッドを使い、入力チェックを行う。
         | validateメソッドを実行することで、入力チェックエラーの数だけConstrainViolationのSetが返ってくる。
@@ -1574,7 +1745,7 @@ Validator(Bean Validation)のテストクラスとして、\ ``FullWidthKatakana
         | エラーがない場合は0が返ってくる。
           今回は半角チェックのアノテーションのみ試験を行っているため、エラーがある場合は1が返ってくる。
     * - | (8)
-      - | テスト対象の入力チェックアノテーションを使用したBeanクラスを、
+      - | テスト対象の入力チェックアノテーションを使用したJavaBeanクラスを、
           テストクラスの内部クラスとして作成している。
 
 JUnitを使用した試験（Spring Validation）
@@ -1653,13 +1824,13 @@ Validator(Spring Validation)のテストクラスとして、\ ``TicketSearchVal
     * - | (1)
       - | 試験対象のValidatorクラスをフィールドに宣言する。
     * - | (2)
-      - | 入力チェックで使用するBeanクラスをフィールドに宣言する。
+      - | 入力チェックで使用するJavaBeanクラスをフィールドに宣言する。
     * - | (3)
       - | 入力チェック結果を格納するBindingResultクラスをフィールドに宣言する。
     * - | (4)
-      - | 試験対象のValidatorクラスをインスタンス化する。
+      - | 試験対象の\ ``Validator``\クラスをインスタンス化する。
     * - | (5)
-      - | 入力チェックで使用するBeanクラスをインスタンス化する。
+      - | 入力チェックで使用するJavaBeanクラスをインスタンス化する。
     * - | (6)
       - | 入力チェック結果を格納するBindingResultクラスをインスタンス化する。
     * - | (7)
