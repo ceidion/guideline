@@ -369,6 +369,8 @@ DBとのアクセス部分がインフラストラクチャ層のテストスコ
 Repositoryの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+\ ``Repository``\ の単体テストで実装方法を説明するテストライブラリは以下である。
+
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
     :header-rows: 1
@@ -379,19 +381,13 @@ Repositoryの単体テスト
       - 使い分けの方針
     * - spring-test
       - Spring JDBCを使用してデータアクセスを行う。
-      - テストデータをsqlファイルで管理する場合
+      - テストデータをSQLファイルで管理する場合
     * - spring-test + DBUnit + spring-test-dbunit
       - DBUnit、spring-test-dbunitの機能を使用してデータアクセスを行う。
       - テストデータをXML、ExcelまたはCSVファイルで管理する場合
 
-DBUnitは主にデータベースをセットアップする機能と、検証する機能を提供している。DBUnitを使用することで、
-データ比較による結果の検証が効率的に実施できる。
-
 spring-testを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-概要
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Repositoryの単体テストは、JUnitを使用して実施する。
 プロジェクト要件などでDBUnitが使用できない場合、Spring JDBCを使用してデータアクセスを行う。
@@ -410,10 +406,10 @@ Repositoryの単体テストは、JUnitを使用して実施する。
 
     * - 作成するファイル名
       - 説明
-    * - ReservationRepositoryTest.java
-      - ReservationRepository.javaのテストクラス。
-    * - test-context.xml
-      - spring-testを使用したRepositoryの単体テストを行う際に使用する設定ファイル。
+    * - \ ``ReservationRepositoryTest.java``\
+      - \ ``ReservationRepository.java``\ のテストクラス。
+    * - \ ``test-context-ReservationRepositoryTest.xml``\ 
+      - spring-testを使用した\ ``Repository``\ の単体テストを行う際に使用する設定ファイル。
         本節で説明する内容はあくまで参考例のため、業務要件に合わせて設定ファイルを用意すること。
 
 .. _TestGuideSettingOfSpringTest:
@@ -423,7 +419,7 @@ spring-testを使用するための設定
 
 | Repositoryの単体テストのための設定ファイルとして  \ ``test-context.xml``\ を作成する。
 
-* ``test-context.xml``
+* ``test-context-ReservationRepositoryTest.xml``
 
 .. code-block:: xml
 
@@ -704,16 +700,11 @@ Repositoryの単体テストクラスの作成方法を説明する。
 spring-testとDBUnitを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-概要
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 データアクセスにDBUnitを使用する場合のRepositoryの単体テスト実装方法について説明する。
 
 DBUnitとは、データベースに依存するクラスのテストを行うためのJUnit拡張フレームワークである。
-テスト実行後のデータベースの状態の検証機能を使用することで試験工数を削減できるため、基本的にはDBUnitを用いて
-実装することを推奨する。
-
-データのセットアップはDBUnitが提供している機能を用いて行う。
+DBUnitが提供する、データベースをセットアップする機能とテスト実行後のデータベースの状態の検証機能を使用することで
+試験工数を削減できるため、基本的にはDBUnitを用いて実装することを推奨する。
 
 DBUnitを利用したRepositoryの単体テストにおいて、作成するファイルを以下に示す。
 
@@ -726,13 +717,13 @@ DBUnitを利用したRepositoryの単体テストにおいて、作成するフ�
 
     * - 作成するファイル名
       - 説明
-    * - MemberRepositoryTest.java
-      - MemberRepository.javaのテストクラス(DBUnitと連携する場合)
-    * - test-context-MemberRepositoryTest.xml
-      - Repositoryの単体テストを行う際に使用する設定ファイル(DBUnitと連携する場合)
-    * - test_data_member.xml
+    * - \ ``MemberRepositoryTest.java``\
+      - \ ``MemberRepository.java``\ のテストクラス(DBUnitと連携する場合)
+    * - \ ``test-context-MemberRepositoryTest.xml``\
+      - \ ``Repository``\ の単体テストを行う際に使用する設定ファイル(DBUnitと連携する場合)
+    * - \ ``test_data_member.xml``\
       - テストデータセットアップ用ファイル
-    * - afterupdate_data_member.xml
+    * - \ ``afterupdate_data_member.xml``\
       - テストの期待結果検証用ファイル
 
 .. _TestGuideSettingOfDbUnit:
@@ -763,6 +754,8 @@ RepositoryのDBUnitを利用した単体テストのための設定ファイル�
     * - | (1)
       - | データソースのクラスを\ ``TransactionAwareDataSourceProxy``\ のbeanにすることで、
            DBUnitをSpringのトランザクション管理下にすることができる。
+
+.. _ImplementsOfRepositoryTestDbUnit:
 
 Repositoryテストの実装(DBUnitと連携する場合)
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -968,6 +961,20 @@ Repositoryテストの実装(DBUnitと連携する場合)
 Serviceの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+\ ``Service``\ の単体テストについては、JUnitを使用して\ ``Service``\ クラスの実装クラスである
+\ ``ServiceImpl``\ クラスに対して試験を実施する。テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスを
+インジェクションしている場合はモックを作成すること。
+モックの作成方法については、\ :ref:`TestingServiceWithSpringTest`\ を参照されたい。
+
+なお、インジェクションするクラスにモック用のダミークラスを別途用意してもよい。
+ダミークラスの作成方法については、本章では説明を割愛する。
+ダミークラスを作成せず、モック用ライブラリを使用する方法については、\ :ref:`TestingServiceWithMockito`\を参照されたい。
+
+なお、テスト済みの\ ``Repository``\ クラスを使用し、かつモック化も行いたい場合は、適宜以下に説明する実装方法を
+組み合わせて実装されたい。
+
+\ ``Service``\ の単体テストで実装方法を説明するテストライブラリは以下である。
+
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
     :header-rows: 1
@@ -983,26 +990,10 @@ Serviceの単体テスト
       - Repositoryをモック化してServiceをテストする。
       - 依存クラスのモック化が必要な場合
 
-
-Serviceの単体テストについては、JUnitを使用して\ ``Service``\ クラスの実装クラス（\ ``ServiceImpl``\）に対して
-試験を実施する。テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスをインジェクションしている場合は
-モックを作成すること。モックの作成方法については、\ :ref:`TestingServiceWithSpringTest`\ を参照されたい。
-
-なお、インジェクションするクラスにモック用のダミークラスを別途用意してもよい。
-ダミークラスの作成方法については、本章では説明を割愛する。
-
-ダミークラスを作成せず、モック用ライブラリを使用する方法については、\ :ref:`TestingServiceWithMockito`\を参照されたい。
-
-なお、テスト済みの\ ``Repository``\ クラスを使用し、かつモック化も行いたい場合は、適宜以下に説明する実装方法を
-組み合わせて実装されたい。
-
 .. _TestingServiceWithSpringTest:
 
 spring-testを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-概要
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 テスト済みの\ ``Repository``\ クラスを使用する場合、DBUnitを使用して\ ``Repository``\ クラスをインジェクションして
 テスト対象の\ ``ServiceImpl``\ クラスのテスト作成方法を説明する。
@@ -1018,25 +1009,58 @@ spring-testを使用した試験
 
     * - 作成するファイル名
       - 説明
-    * - XxxServiceImplTest.java
-      - XxxServiceImpl.javaのテストクラス
-    * - MessageSourceMock.java
-      - Serviceの単体試験を行う際に使用するMessageSourceのモッククラス。
+    * - \ ``TicketReserveServiceImplInjectTest.java``\
+      - \ ``TicketReserveServiceImpl.java``\ のテストクラス
+    * - \ ``test-context-TicketReserveServiceImplInjectTest.xml``\
+      - \ ``Service``\ の単体テストを行う際に使用する設定ファイル。
 
-Serviceテストの実装(DBUnitと連携する場合)
+Serviceテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Repositoryをインジェクションしてテストする方法は\ :ref:`ImplementOfRepositoryTest`\ を参照されたい。
+\ ``Repository``\ クラスなどテスト対象の\ ``ServiceImpl``\ クラスが依存するクラスをインジェクションする場合の
+テスト作成方法を説明する。
+
+なお、テストデータのセットアップが必要であれば、DBUnitを使用する場合は\ :ref:`ImplementsOfRepositoryTestDbUnit`\ を、
+Spring JDBCを使用する場合は\ :ref:`SetUpOfTestingData`\ を参照されたい。
+
+
+* ``TicketReserveServiceImplInjectTest.java``
+
+.. code-block:: java
+
+    @RunWith(SpringJUnit4ClassRunner.class)
+    @ContextConfiguration(locations = "classpath:META-INF/spring/test-context-TicketReserveServiceImplInjectTest.xml")
+    @Transactional
+    public class TicketReserveServiceImplInjectTest {
+
+        @Inject
+        TicketReserveService target;
+
+        @Inject
+        private JdbcTemplate jdbcTemplate;
+
+        @Test
+        public void testfindMember01() {
+
+            Member actmember = target.findMember("0000000001");
+
+            Member expmember = new Member();
+            expmember.setKanaFamilyName("デンデン");
+
+            assertEquals(actmember.getKanaFamilyName(), expmember
+                    .getKanaFamilyName());
+
+        }
+    }
+
 
 .. _TestingServiceWithMockito:
 
 JunitとMockitoを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-概要
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-\ ``Repository``\ クラスなど\ ``ServiceImpl``\ クラスが依存するクラスをモック化する場合のテスト作成方法を説明する。
+\ ``Repository``\ クラスなどテスト対象の\ ``ServiceImpl``\ クラスが依存するクラスをモック化する場合の
+テスト作成方法を説明する。
 
 作成するファイルを以下に示す。
 
@@ -1049,19 +1073,80 @@ JunitとMockitoを使用した試験
 
     * - 作成するファイル名
       - 説明
-    * - TicketReserveServiceImplTestInject.java
-      - TicketReserveServiceImpl.javaのテストクラス
-    * - XxxMock.java
-      - Serviceの単体試験を行う際に使用するXxxのモッククラス。
+    * - \ ``TicketReserveServiceImplMockTest.java``\
+      - \ ``TicketReserveServiceImpl.java``\ のテストクラス（モックを使用する場合）
 
 .. _ImplementOfServiceTest:
 
 Serviceテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-・モッククラスの作成方法（Mockito）
+Serviceの単体テストクラスの作成方法を説明する。
 
-・Serviceのテストクラス作成
+* ``TicketReserveServiceImplMockTest.java``
+
+.. code-block:: java
+
+    public class TicketReserveServiceImplMockTest {
+
+        @Rule // (1)
+        public MockitoRule mockito = MockitoJUnit.rule();
+
+        @Mock // (2)
+        MemberRepository memberRepository;
+
+        @Mock
+        FlightRepository flightRepository;
+
+        @Mock
+        TicketSharedService ticketSharedService;
+
+        @Mock
+        ReservationRepository reservationRepository;
+
+        @InjectMocks // (3)
+        private TicketReserveServiceImpl target;
+
+        @Before
+        public void setUp() {
+
+            Member member = new Member();
+            member.setKanaFamilyName("デンデン");
+
+            when(memberRepository.findOne(anyString())).thenReturn(null);
+            when(memberRepository.findOne("0000000001")).thenReturn(member);
+        }
+
+        @Test
+        public void testfindMember01() {
+
+            Member actmember = target.findMember("0000000001");
+
+            Member expmember = new Member();
+            expmember.setKanaFamilyName("デンデン");
+
+            assertEquals(actmember.getKanaFamilyName(), expmember
+                    .getKanaFamilyName());
+        }
+    }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | UnitでMockitoを利用するための宣言
+          \ ``@Rule``\ により、後述のアノテーションベースのモックオブジェクトの初期化機能が利用可能になる。
+    * - | (2)
+      - | \ ``@Mock``\ アノテーションをモック化したいクラスに付与することで、対象クラスのモックオブジェクトが
+          Mockitoによって自動的に代入される。モッククラスを別途定義する必要はない。
+    * - | (3)
+      - | \ ``@InjectMocks``\ アノテーションをテスト対象としたい具象クラスに付与することで、対象クラスのインスタンスが
+          Mockitoによって自動的に代入され、さらに対象クラス内のクラスと、\ ``@Mock``\ アノテーションが付与されたクラス
+          が一致する場合、自動的にモックオブジェクトが代入される。
 
 |
 
@@ -1112,18 +1197,12 @@ Springは\ ``Controller``\ クラスを試験するためのサポートクラ�
 spring-test + MockMVCを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-概要
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 Controllerテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 
 spring-test + MockMVC + Mockitoを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-概要
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 \ ``Controller``\ がインジェクションしている\ ``Service``\ クラスはモック用ライブラリを使用する。
 Serviceクラスがテスト済みの場合は、テスト済みのServiceクラスを使用する。
@@ -1139,10 +1218,8 @@ Serviceクラスがテスト済みの場合は、テスト済みのServiceクラ
 
     * - 作成するファイル名
       - 説明
-    * - XxxControllerTest.java
-      - XxxController.javaのテストクラス
-    * - XxxServiceImplMock
-      - Controller,Formの単体テストを行う際に使用するServiceのモッククラス。
+    * - \ ``XxxControllerTest.java``\
+      - \ ``XxxController.java``\ のテストクラス
 
 Controllerテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1369,9 +1446,6 @@ Validatorの単体テスト
 JUnitを使用した試験（Bean Validation）
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-概要
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 Validator(Bean Validation)の単体テストについては、JUnitを使用して試験を実施する。
 カスタムバリデーションの試験を行う。HibernateValidatorが用意する入力チェックのアノテーションについては
 フレームワーク側で担保しているので、単体テストを行う必要はない。
@@ -1387,8 +1461,8 @@ Validator(Bean Validation)の単体テストについては、JUnitを使用し�
 
     * - 作成するファイル名
       - 説明
-    * - HalfWidthNumberTest.java
-      - HalfWidthNumber.javaのテストクラス
+    * - \ ``HalfWidthNumberTest.java``\
+      - \ ``HalfWidthNumber.java``\ のテストクラス
 
 Validator(Bean Validation)テストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1446,9 +1520,6 @@ Validator(Bean Validation)のテストクラスとして、\ ``HalfWidthNumberTe
 JUnitを使用した試験（Spring Validation）
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-概要
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 Validator(Spring Validation)の単体テストについては、JUnitを使用して試験を実施する。
 相関項目チェックの試験を行う。
 
@@ -1463,8 +1534,8 @@ Validator(Spring Validation)の単体テストについては、JUnitを使用�
 
     * - 作成するファイル名
       - 説明
-    * - ReservationFlightValidatorTest.java
-      - ReservationFlightValidator.javaのテストクラス
+    * - \ ``ReservationFlightValidatorTest.java``\
+      - \ ``ReservationFlightValidator.java``\ のテストクラス
 
 Validator(Spring Validation)テストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
