@@ -17,7 +17,7 @@ Overview
 .. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 20 40 40
+    :widths: 20 35 45
 
     * - テスト実行方法
       - 説明
