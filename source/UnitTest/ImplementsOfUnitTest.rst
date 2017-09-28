@@ -1461,50 +1461,58 @@ Validator(Bean Validation)の単体テストについては、JUnitを使用し�
 
     * - 作成するファイル名
       - 説明
-    * - \ ``HalfWidthNumberTest.java``\
-      - \ ``HalfWidthNumber.java``\ のテストクラス
+    * - \ ``FullWidthKatakanaTest.java``\
+      - \ ``FullWidthKatakanaTest.java``\ のテストクラス
 
 Validator(Bean Validation)テストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Validator(Bean Validation)のテストクラスとして、\ ``HalfWidthNumberTest``\ を作成する。
+Validator(Bean Validation)のテストクラスとして、\ ``FullWidthKatakanaTest``\ を作成する。
 
-* ``HalfWidthNumberTest.java``
+* ``FullWidthKatakanaTest.java``
 
 .. code-block:: java
 
-    public class HalfWidthNumberTest {
+    public class FullWidthKatakanaTest {
 
+        // (1)
         private static Validator validator;
 
+        // (2)
         @BeforeClass
         public static void setUpBeforeClass() throws Exception {
-            ValidatorFactory validatorFacotry = Validation
-                    .buildDefaultValidatorFactory();
-            validator = validatorFacotry.getValidator();
+
+            // (3)
+            ValidatorFactory validatorFactory = Validation.buildDefaultValidatorFactory();
+
+            // (4)
+            validator = validatorFactory.getValidator();
         }
 
         @Test
-        public void testValidate01() {
+        public void testFullWidthKatakana01() {
 
-            String membershipNumber = "0123456789";
+            // (5)
+            FullWidthKatakanaBean bean = new FullWidthKatakanaBean();
 
-            PassengerForm form = new PassengerForm();
+            // omitted
 
-            // ダミー情報を設定
-            form.setFamilyName("ミョウジ");
-            form.setGivenName("ナマエ");
-            form.setAge(20);
-            form.setGender(Gender.F);
-            // テスト対象のフィールドに正常値をセット
-            form.setMembershipNumber(membershipNumber);
+            // (6)
+            Set<ConstraintViolation<FullWidthKatakanaBean>> violations = validator.validate(bean);
 
-            Set<ConstraintViolation<PassengerForm>> violations = validator.validate(
-                    form);
-
-            // エラーがないことを確認
-            assertEquals(violations.size(), (0));
+            // (7)
+            assertEquals(violations.size(), 0);
         }
+
+        // (8)
+        private static class FullWidthKatakanaBean {
+
+            @FullWidthKatakana
+            private String testString;
+
+            // omitted
+        }
+    }
 
 
 .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
@@ -1515,7 +1523,29 @@ Validator(Bean Validation)のテストクラスとして、\ ``HalfWidthNumberTe
     * - 項番
       - 説明
     * - | (1)
-      - | 
+      - | 試験対象のValidatorクラスをフィールドに宣言する。
+    * - | (2)
+      - | @BeforeClassアノテーションを付与する。
+        | @Beforeと同様に共通の初期化処理を行うためのアノテーションである。
+          @Beforeとは異なり、そのテストクラスに含まれる最初のテストメソッドが実行される前に一度だけ実行する。
+    * - | (3)
+      - | ValidatorFactoryクラスをインスタンス化する。
+    * - | (4)
+      - | getValidatorメソッドにより、Validatorを取得する。
+        | Validatorを取得することで、validateメソッドを使った入力チェックが可能となる。
+    * - | (5)
+      - | 入力チェックアノテーションを使用したBeanクラスをインスタンス化する。
+    * - | (6)
+      - | validateメソッドを使い、入力チェックを行う。
+        | validateメソッドを実行することで、入力チェックエラーの数だけConstrainViolationのSetが返ってくる。
+          validateメソッドの引数にはFullWidthKatakanaBeanクラスのオブジェクトを指定する。
+    * - | (7)
+      - | sizeメソッドを使って入力チェックエラーの数を取得し、エラーが発生したかどうかを確認する。
+        | エラーがない場合は0が返ってくる。
+          今回は半角チェックのアノテーションのみ試験を行っているため、エラーがある場合は1が返ってくる。
+    * - | (8)
+      - | テスト対象の入力チェックアノテーションを使用したBeanクラスを、
+          テストクラスの内部クラスとして作成している。
 
 JUnitを使用した試験（Spring Validation）
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1534,48 +1564,78 @@ Validator(Spring Validation)の単体テストについては、JUnitを使用�
 
     * - 作成するファイル名
       - 説明
-    * - \ ``ReservationFlightValidatorTest.java``\
-      - \ ``ReservationFlightValidator.java``\ のテストクラス
+    * - \ ``TicketSearchValidatorTest.java``\
+      - \ ``TicketSearchValidator.java``\ のテストクラス
 
 Validator(Spring Validation)テストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Validator(Bean Validation)のテストクラスとして、\ ``ReservationFlightValidatorTest.java``\ を作成する。
+Validator(Spring Validation)のテストクラスとして、\ ``TicketSearchValidatorTest.java``\ を作成する。
 
-* ``ReservationFlightValidatorTest.java``
+* ``TicketSearchValidatorTest.java``
 
 .. code-block:: java
 
-    public class ReservationFlightValidatorTest {
+    public class TicketSearchValidatorTest {
 
-        private ReservationFlightValidator target;
+        // (1)
+        private TicketSearchValidator validator;
 
-        private ReservationFlightForm reservationFlightForm;
+        // (2)
+        private TicketSearchForm ticketSearchForm;
 
+        // (3)
         private BindingResult result;
 
         @Before
         public void setUp() throws Exception {
-            MockitoAnnotations.initMocks(this);
 
-            target = new ReservationFlightValidator();
-            reservationFlightForm = new ReservationFlightForm();
-            result = new DirectFieldBindingResult(reservationFlightForm, "reservationFlightForm");
+            // (4)
+            validator = new TicketSearchValidator();
+
+            // (5)
+            ticketSearchForm = new TicketSearchForm();
+
+            // (6)
+            result = new DirectFieldBindingResult(ticketSearchForm, "TicketSearchForm");
         }
 
         @Test
-        public void testValidate04() {
+        public void testTicketSearchValidator01() throws Exception {
 
-            // ダミー情報を設定
-            reservationFlightForm.setFlightType(FlightType.OW);
-            reservationFlightForm.setSelectFlightFormList(
-                    getSelectFlightFormList());
+            // omitted
 
-            // バリデータの実行
-            target.validate(reservationFlightForm, result);
+            // (7)
+            validator.validate(ticketSearchForm, result);
 
-            // エラーがないことを確認
+            // (8)
             assertEquals(result.hasErrors(), false);
         }
     }
 
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | 試験対象のValidatorクラスをフィールドに宣言する。
+    * - | (2)
+      - | 入力チェックで使用するBeanクラスをフィールドに宣言する。
+    * - | (3)
+      - | 入力チェック結果を格納するBindingResultクラスをフィールドに宣言する。
+    * - | (4)
+      - | 試験対象のValidatorクラスをインスタンス化する。
+    * - | (5)
+      - | 入力チェックで使用するBeanクラスをインスタンス化する。
+    * - | (6)
+      - | 入力チェック結果を格納するBindingResultクラスをインスタンス化する。
+    * - | (7)
+      - | Validateメソッドを使い、入力チェックを行う。
+        | Validateメソッドの引数に入力チェックを行うFormクラスと、
+          入力チェック結果を格納するBindingResultクラスのインスタンスを指定する。
+    * - | (8)
+      - | hasErrorsメソッドを使って、エラーの有無を判定する。
+        | エラーがある場合はtrueが返り値として返り、エラーがない場合はfalseが返り値として返る。
