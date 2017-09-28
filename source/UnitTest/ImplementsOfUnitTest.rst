@@ -16,8 +16,8 @@ Overview
 本節では、Spring Frameworkの機能を使用したコンポーネントに着目して、その単体テストの実装例を示す。
 
 最初に、単体テストの実装で使用するOSSライブラリ構成を提示する。
-次に、単体テストを実行するために必要なテストデータのセットアップ方法について説明する。
-次に、各レイヤー毎のテスト実装方法について説明する。
+次に、単体テストを実行するために共通して必要となるテストデータのセットアップ方法について説明し、
+最後に、各レイヤー毎のテスト実装例を説明する。
 
 なお、OSSライブラリ構成および実装例として記載しているサンプルは一例である。
 実際に採用される際には、業務要件に従って検討していただきたい。
@@ -164,7 +164,7 @@ OSSのバージョン★
     <!-- (X) -->
     <dependency>
       <groupId>com.github.springtestDbUnit</groupId>
-      <artifactId>spring-test-dbunit★</artifactId>
+      <artifactId>spring-test-dbunit</artifactId>
       <version>1.3.0</version>
       <scope>test</scope>
     </dependency>
@@ -368,34 +368,41 @@ DBとのアクセス部分がインフラストラクチャ層のテストスコ
 
 Repositoryの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Repositoryの単体テストは、JUnitを使用して実施する。
+なお、Repositoryの単体テストを行う際は単体テスト用の設定ファイルを用意すること。
+設定ファイルの作成方法は後述する。
 
-\ ``Repository``\ の単体テストで実装方法を説明するテストライブラリは以下である。
+ここでは、以下の\ ``Repository``\ の単体テスト実装方法を説明する。
 
-.. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 30 30 40
+    :widths: 30 70
 
-    * - 使用するテストライブラリ(JUnit以外)
+    * - テスト実装方法
       - 説明
-      - 使い分けの方針
     * - spring-test
       - Spring JDBCを使用してデータアクセスを行う。
-      - テストデータをSQLファイルで管理する場合
     * - spring-test + DBUnit + spring-test-dbunit
       - DBUnit、spring-test-dbunitの機能を使用してデータアクセスを行う。
-      - テストデータをXML、ExcelまたはCSVファイルで管理する場合
+
+Spring JDBCを使用した場合は、テストデータをSQLファイルで管理できる。
+DBUnit及びspring-test-dbunitを使用した場合はテストデータをXML、ExcelまたはCSVファイルで管理することができる。
+
+データベースに依存するクラスのテストを行うためのJUnit拡張フレームワークであるDBUnitが提供する、
+データベースのセットアップ機能やテスト実行後のデータベースの状態検証機能を使用することで単体テストの効率化が
+できるため、基本的にはDBUnitを用いて実装することを推奨する。
+プロジェクト要件などでDBUnitが使用できない場合、Spring JDBCを使用してデータアクセスを行うよう実装されたい。
+
+また、Repositoryの単体テストを行う際は単体テスト用の設定ファイルを用意すること。
+
 
 spring-testを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Repositoryの単体テストは、JUnitを使用して実施する。
-プロジェクト要件などでDBUnitが使用できない場合、Spring JDBCを使用してデータアクセスを行う。
-また、Repositoryの単体テストを行う際は単体テスト用の設定ファイルを用意すること。
+\ ``Repository``\ の単体テストでデータのセットアップを行う場合は、\ :ref:`SetUpOfTestingData`\ を参照されたい。
 
-データのセットアップを行う場合は、\ :ref:`SetUpOfTestingData`\ を参照されたい。
-
-作成するファイル例を以下に示す。
+Spring JDBCを利用したRepositoryの単体テストにおいて、作成するファイルを以下に示す。
 
 .. figure:: ./images/UnitTestRepositorySpringTestItems.png
 
@@ -417,7 +424,7 @@ Repositoryの単体テストは、JUnitを使用して実施する。
 spring-testを使用するための設定
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-| Repositoryの単体テストのための設定ファイルとして  \ ``test-context.xml``\ を作成する。
+Repositoryの単体テストのための設定ファイルとして  \ ``test-context-ReservationRepositoryTest.xml``\ を作成する。
 
 * ``test-context-ReservationRepositoryTest.xml``
 
@@ -702,10 +709,6 @@ spring-testとDBUnitを使用した試験
 
 データアクセスにDBUnitを使用する場合のRepositoryの単体テスト実装方法について説明する。
 
-DBUnitとは、データベースに依存するクラスのテストを行うためのJUnit拡張フレームワークである。
-DBUnitが提供する、データベースをセットアップする機能とテスト実行後のデータベースの状態の検証機能を使用することで
-試験工数を削減できるため、基本的にはDBUnitを用いて実装することを推奨する。
-
 DBUnitを利用したRepositoryの単体テストにおいて、作成するファイルを以下に示す。
 
 .. figure:: ./images/UnitTestRepositoryDbunitItems.png
@@ -904,7 +907,7 @@ Repositoryテストの実装(DBUnitと連携する場合)
     * XlsDataLoaderの実装
 
     spring-test-dbunitが提供する抽象基底クラスである\ ``com.github.springtestdbunit.dataset.AbstractDataSetLoader``\ を
-    利用して、以下のようにExcel形式のデータ定義ファイルの\ ``XlsDataSetLoader``\ を定義する。
+    利用して、以下のようにExcel形式のデータ定義ファイルの\ ``XlsDataSetLoader``\ クラスを定義する。
 
      .. code-block:: java
 
@@ -918,15 +921,35 @@ Repositoryテストの実装(DBUnitと連携する場合)
             }
         }
 
+    spring-test-dbunitは\ ``@DbUnitConfiguration``\ アノテーションに\ ``XlsDataSetLoader``\ クラスを指定することで、
+    \ ``@DatabaseSetup``\ アノテーションを使用したExcel形式のデータ定義ファイル読込みができるようになる。
+    以下に実装例を示す。
 
-    * 単体テスト用設定ファイルへのBean定義の追加
+    * ``MemberRepositoryTestVerDbunitExl.java``
 
-    以下のBean定義を、単体テスト用設定ファイルに追記する。 
-    spring-test-dbunitは\ ``dbUnitDataSetLoader``\ というbean名のBean定義をルックアップしてデータ定義ファイルの読込に使用する。
+     .. code-block:: java
 
-     .. code-block:: xml
+        @RunWith(SpringJUnit4ClassRunner.class)
+        @ContextConfiguration(locations = {
+                "classpath:META-INF/spring/test-context-repository-dbunit.xml" })
+        @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class,
+                DirtiesContextTestExecutionListener.class,
+                TransactionDbUnitTestExecutionListener.class,
+                SqlScriptsTestExecutionListener.class })
+        @Transactional
+        @DbUnitConfiguration(dataSetLoader = XlsDataSetLoader.class)
+        public class MemberRepositoryTestVerDbunitExl {
+        
+        // omitted
+        
+            @Test
+            @DatabaseSetup("classpath:META-INF/dbunit/test_data_member.xlsx")
+            @ExpectedDatabase(value = "classpath:META-INF/dbunit/afterupdate_data_member.xlsx", assertionMode = DatabaseAssertionMode.NON_STRICT)
+            public void testUpdate() {
+                // omitted
+            }
+        }
 
-        <bean id="dbUnitDataSetLoader" class="<パッケージ名>.XlsDataSetLoader" />
 
     * Excel形式のデータ定義ファイルの作成
 
@@ -948,7 +971,7 @@ Repositoryテストの実装(DBUnitと連携する場合)
 ドメイン層の詳細については、開発ガイドラインの\ :ref:`LayerOfDomain`\ を参照されたい。
 
 業務ロジックや、CRUD操作についての部分がドメイン層のテストスコープとなる。
-本節は、ドメイン層の\ ``ServiceImpl``\ クラスに対するテストクラスの作成例を示す。
+本節は、ドメイン層の\ ``Service``\ クラスの実装クラスである\ ``ServiceImpl``\クラスに対するテストクラスの作成例を示す。
 
 ドメイン層のテスト対象のコンポーネントを以下に示す。
 
@@ -961,8 +984,28 @@ Repositoryテストの実装(DBUnitと連携する場合)
 Serviceの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-\ ``Service``\ の単体テストについては、JUnitを使用して\ ``Service``\ クラスの実装クラスである
-\ ``ServiceImpl``\ クラスに対して試験を実施する。テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスを
+テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスをインジェクションしている場合はモックを作成すること。
+モックの作成方法については、\ :ref:`TestingServiceWithSpringTest`\ を参照されたい。
+
+ここでは、以下の\ ``Service``\ の単体テスト実装方法を説明する。
+
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 30 30 40
+
+    * - テスト実装方法
+      - 説明
+      - 使い分けの方針
+    * - spring-test
+      - テスト済みのRepositoryを使用してServiceをテストする。
+      - 依存クラスがテスト済みでモック化する必要がない場合
+    * - Mockito
+      - Repositoryをモック化してServiceをテストする。
+      - 依存クラスのモック化が必要な場合
+
+\ ``Service``\ の単体テストについては、JUnitを使用して\ ``Service``\ クラスの実装クラスである\ ``ServiceImpl``\
+クラスに対して試験を実施する。テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスを
 インジェクションしている場合はモックを作成すること。
 モックの作成方法については、\ :ref:`TestingServiceWithSpringTest`\ を参照されたい。
 
@@ -973,22 +1016,6 @@ Serviceの単体テスト
 なお、テスト済みの\ ``Repository``\ クラスを使用し、かつモック化も行いたい場合は、適宜以下に説明する実装方法を
 組み合わせて実装されたい。
 
-\ ``Service``\ の単体テストで実装方法を説明するテストライブラリは以下である。
-
-.. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
-.. list-table::
-    :header-rows: 1
-    :widths: 30 30 40
-
-    * - 使用するテストライブラリ(JUnit以外)
-      - 説明
-      - 使い分けの方針
-    * - spring-test
-      - テスト済みのRepositoryを使用してServiceをテストする。
-      - 依存クラスがテスト済みでモック化する必要がない場合
-    * - Mockito
-      - Repositoryをモック化してServiceをテストする。
-      - 依存クラスのモック化が必要な場合
 
 .. _TestingServiceWithSpringTest:
 
@@ -1174,12 +1201,12 @@ Serviceの単体テストクラスの作成方法を説明する。
 Controllerの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
     :header-rows: 1
     :widths: 30 30 40
 
-    * - 使用するテストライブラリ(JUnit以外)
+    * - テスト実装方法
       - 説明
       - 使い分けの方針
     * - spring-test + mockMvc
@@ -1193,6 +1220,8 @@ Controllerの単体テスト
 Springは\ ``Controller``\ クラスを試験するためのサポートクラス
 (\ ``org.springframework.test.web.servlet.setup.MockMvcBuilders``\ など)を用意している。
 これらのクラスを利用することでJUnitから\ ``Controller``\ クラスのメソッドを実行して試験をすることができる。
+
+
 
 spring-test + MockMVCを使用した試験
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1428,20 +1457,21 @@ Helperの単体テストで、特別に意識すべきことはない。通常�
 Validatorの単体テスト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. tabularcolumns:: |p{0.20\linewidth}|p{0.20\linewidth}|p{0.60\linewidth}|
+.. tabularcolumns:: |p{0.30\linewidth}|p{0.70\linewidth}|
 .. list-table::
     :header-rows: 1
-    :widths: 30 30 40
+    :widths: 30 70
 
-    * - 使用するテストライブラリ(JUnit以外)
+    * - テスト実装方法
       - 説明
-      - 使い分けの方針
-    * - -（JUnitのみ）
+    * - （JUnitのみ）
       - カスタムバリデーションをテストする。
-      - BeanValidationを使用している場合
-    * - -（JUnitのみ）
+    * - （JUnitのみ）
       - 相関項目チェックをテストする。
-      - SpringValidationを使用している場合
+
+
+BeanValidationを使用している場合
+SpringValidationを使用している場合
 
 JUnitを使用した試験（Bean Validation）
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
