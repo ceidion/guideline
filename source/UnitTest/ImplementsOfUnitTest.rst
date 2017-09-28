@@ -13,8 +13,14 @@
 Overview
 --------------------------------------------------------------------------------
 
-本節の実装例として記載しているサンプル及び、OSSライブラリ構成は一例である。
-実際に採用される際には、業務要件に従って実装いただきたい。
+本節では、Spring Frameworkの機能を使用したコンポーネントに着目して、その単体テストの実装例を示す。
+
+最初に、単体テストの実装で使用するOSSライブラリ構成を提示する。
+次に、単体テストを実行するために必要なテストデータのセットアップ方法について説明する。
+次に、各レイヤー毎のテスト実装方法について説明する。
+
+なお、OSSライブラリ構成および実装例として記載しているサンプルは一例である。
+実際に採用される際には、業務要件に従って検討していただきたい。
 
 |
 
@@ -182,9 +188,8 @@ OSSのバージョン★
 
 テストを実施するにあたり、データストアにデータベースを使用する場合、テスト用のデータベースのセットアップが必要になる。
 
-テスト用のテーブルは、テスト用のコンテキストファイルに\ ``<jdbc:initialize-database>``\ を定義することで
-テストクラス実行時にテスト用コンテキストファイルを読み込むことでテスト用のRDBMSのテーブル定義(DDL文)や
-データ操作(DML文)を発行してデータベースを初期化することができる。
+テストで使用するテーブルを初期化する場合は、テスト用に作成したコンテキストに\ ``<jdbc:initialize-database>``\ を
+定義することでテスト実行時にデータベースを初期化するためのSQL(DDLとDML)を発行することができる。
 なお、\ ``<jdbc:initialize-database>``\ を使用して作成したテーブルと初期化データは実行後にコミットされるため、
 テスト終了後もデータベースの状態は戻らないことに注意されたい。
 
@@ -373,11 +378,11 @@ Repositoryの単体テスト
       - 説明
       - 使い分けの方針
     * - spring-test
-      - Spring JDBCを使用してデータ操作を行う。
+      - Spring JDBCを使用してデータアクセスを行う。
       - テストデータをsqlファイルで管理する場合
     * - spring-test + DBUnit + spring-test-dbunit
-      - DBUnit、spring-test-dbunitの機能を使用してデータ操作を行う。
-      - テストデータをExcelまたはCSVファイルで管理する場合
+      - DBUnit、spring-test-dbunitの機能を使用してデータアクセスを行う。
+      - テストデータをXML、ExcelまたはCSVファイルで管理する場合
 
 DBUnitは主にデータベースをセットアップする機能と、検証する機能を提供している。DBUnitを使用することで、
 データ比較による結果の検証が効率的に実施できる。
@@ -389,11 +394,10 @@ spring-testを使用した試験
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Repositoryの単体テストは、JUnitを使用して実施する。
-プロジェクト要件などでDBUnitが使用できない場合、\ ``org.springframework.jdbc.core.JdbcTemplate``\ を用いて
-データアクセスを行う。
+プロジェクト要件などでDBUnitが使用できない場合、Spring JDBCを使用してデータアクセスを行う。
 また、Repositoryの単体テストを行う際は単体テスト用の設定ファイルを用意すること。
 
-データのセットアップを行う方法については、\ :ref:`SetUpOfTestingData`\ を参照されたい。
+データのセットアップを行う場合は、\ :ref:`SetUpOfTestingData`\ を参照されたい。
 
 作成するファイル例を以下に示す。
 
@@ -521,7 +525,6 @@ Repositoryテストの実装
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Repositoryの単体テストクラスの作成方法を説明する。
-テストテーブルのセットアップ、データの初期化は設定ファイル読み込み時に
 
 * ``ReservationRepositoryTest.java``
 
@@ -737,11 +740,11 @@ DBUnitを利用したRepositoryの単体テストにおいて、作成するフ�
 DBUnitを使用するための設定
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-RepositoryのDBUnitを利用した単体テストのための設定ファイルとして \ ``test-context-dbunit.xml``\ を作成する。
+RepositoryのDBUnitを利用した単体テストのための設定ファイルとして \ ``test-context-MemberRepositoryTest.xml``\ を作成する。
 \ :ref:`TestGuideSettingOfSpringTest`\ で作成したファイルに
 \ ``org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy``\ のBean定義を追加する
 
-* ``test-context-dbunit.xml``
+* ``test-context-MemberRepositoryTest.xml``
 
 .. code-block:: xml
 
@@ -980,16 +983,18 @@ Serviceの単体テスト
       - Repositoryをモック化してServiceをテストする。
       - 依存クラスのモック化が必要な場合
 
+
 Serviceの単体テストについては、JUnitを使用して\ ``Service``\ クラスの実装クラス（\ ``ServiceImpl``\）に対して
-試験を実施する。テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスを
-インジェクションしている場合はモックを作成すること。
-モックの作成方法については、\ :ref:`TestingServiceWithSpringTest`\ を参照されたい。
+試験を実施する。テスト対象の\ ``ServiceImpl``\ クラスがテストを実施していないクラスをインジェクションしている場合は
+モックを作成すること。モックの作成方法については、\ :ref:`TestingServiceWithSpringTest`\ を参照されたい。
 
-なお、インジェクションするクラスにモッククラスを別途用意してもよい。
-モッククラスの作成方法については、本ガイドラインでは説明を割愛する。
+なお、インジェクションするクラスにモック用のダミークラスを別途用意してもよい。
+ダミークラスの作成方法については、本章では説明を割愛する。
 
-モッククラスを作成せず、モック用ライブラリを使用する方法については、\ :ref:`TestingServiceWithMockito`\を
-参照されたい。
+ダミークラスを作成せず、モック用ライブラリを使用する方法については、\ :ref:`TestingServiceWithMockito`\を参照されたい。
+
+なお、テスト済みの\ ``Repository``\ クラスを使用し、かつモック化も行いたい場合は、適宜以下に説明する実装方法を
+組み合わせて実装されたい。
 
 .. _TestingServiceWithSpringTest:
 
@@ -1044,8 +1049,8 @@ JunitとMockitoを使用した試験
 
     * - 作成するファイル名
       - 説明
-    * - XxxServiceTest.java
-      - XxxService.javaのテストクラス
+    * - TicketReserveServiceImplTestInject.java
+      - TicketReserveServiceImpl.javaのテストクラス
     * - XxxMock.java
       - Serviceの単体試験を行う際に使用するXxxのモッククラス。
 
