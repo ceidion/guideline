@@ -1042,7 +1042,8 @@ Spring JDBCを使用する場合は\ :ref:`SetUpOfTestingData`\ を参照され�
 .. code-block:: java
 
     @RunWith(SpringJUnit4ClassRunner.class)
-    @ContextConfiguration(locations = "classpath:META-INF/spring/test-context-TicketReserveServiceImplInjectTest.xml")
+    @ContextConfiguration(locations =
+            "classpath:META-INF/spring/test-context-TicketReserveServiceImplInjectTest.xml")
     @Transactional
     public class TicketReserveServiceImplInjectTest {
 
@@ -1053,18 +1054,41 @@ Spring JDBCを使用する場合は\ :ref:`SetUpOfTestingData`\ を参照され�
         private JdbcTemplate jdbcTemplate;
 
         @Test
-        public void testfindMember01() {
+        public void testregisterReservation01() {
 
-            Member actmember = target.findMember("0000000001");
+            jdbcTemplate.execute("ALTER SEQUENCE sq_reservation_1 RESTART WITH 1");
 
-            Member expmember = new Member();
-            expmember.setKanaFamilyName("デンデン");
+            Reservation reservation = CreateSetData();
 
-            assertEquals(actmember.getKanaFamilyName(), expmember
-                    .getKanaFamilyName());
+            TicketReserveDto actticketReserveDto = target.registerReservation(reservation);
 
+            TicketReserveDto expticketReserveDto = new TicketReserveDto("0000000001", new Date());
+
+            assertEquals(actticketReserveDto.getReserveNo(), expticketReserveDto.getReserveNo());
+            assertEquals(actticketReserveDto.getPaymentDate().getClass(),
+                    expticketReserveDto.getPaymentDate().getClass());
+        }
+
+        // (1)
+        private Reservation CreateSetData() {
+
+            Reservation reservation = new Reservation();
+
+            // omitted
+
+            return reservation;
         }
     }
+
+.. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+.. list-table::
+    :header-rows: 1
+    :widths: 10 90
+
+    * - 項番
+      - 説明
+    * - | (1)
+      - | 
 
 
 .. _TestingServiceWithMockito:
@@ -1117,26 +1141,41 @@ Serviceテストの実装
         @InjectMocks // (3)
         private TicketReserveServiceImpl target;
 
-        @Before
-        public void setUp() {
+        @Test
+        public void testregisterReservation01() {
 
-            Member member = new Member();
-            member.setKanaFamilyName("デンデン");
+            Flight flightRetrun = new Flight();
+            flightRetrun.setVacantNum(1);
 
-            when(memberRepository.findOne(anyString())).thenReturn(null);
-            when(memberRepository.findOne("0000000001")).thenReturn(member);
+            when(ticketSharedService.isAvailableFareType((FareType) anyObject(), any(Date.class))).thenReturn(true);
+            when(flightRepository.findOneForUpdate(any(Date.class), anyString(), 
+                    (BoardingClass) anyObject(), (FareType) anyObject())).thenReturn(flightRetrun);
+            when(flightRepository.update((Flight) anyObject())).thenReturn(1);
+            when(reservationRepository.insert((Reservation) anyObject())).thenReturn(1);
+            when(reservationRepository.insertReserveFlight((ReserveFlight) anyObject())).thenReturn(1);
+            when(reservationRepository.insertPassenger((Passenger) anyObject())).thenReturn(1);
+
+            Reservation reservation = CreateSetData();
+
+            reservation.setReserveNo("0000000001");
+
+            TicketReserveDto ticketReserveDto = target.registerReservation(reservation);
+
+            TicketReserveDto expticketReserveDto = new TicketReserveDto("0000000001", new Date());
+
+            assertEquals(ticketReserveDto.getReserveNo(), expticketReserveDto.getReserveNo());
+            assertEquals(ticketReserveDto.getPaymentDate().getClass(),
+                    expticketReserveDto.getPaymentDate().getClass());
+
         }
 
-        @Test
-        public void testfindMember01() {
+        private Reservation CreateSetData() {
 
-            Member actmember = target.findMember("0000000001");
+            Reservation reservation = new Reservation();
 
-            Member expmember = new Member();
-            expmember.setKanaFamilyName("デンデン");
+            // omitted
 
-            assertEquals(actmember.getKanaFamilyName(), expmember
-                    .getKanaFamilyName());
+            return reservation;
         }
     }
 
