@@ -599,7 +599,7 @@ Spring JDBCを使用する場合の\ ``Repository``\ のテストクラス作成
 
 .. note:: **JdbcTemplateの使い方(INSERT/UPDATE/DELETE文)**
 
-    JdbcTemplateにて、INSERT/UPDATE/DELETE文を発行する際はupdateメソッドを使用する。
+    \ ``JdbcTemplate``\ にて、INSERT/UPDATE/DELETE文を発行する際はupdateメソッドを使用する。
     INSERT/UPDATE/DELETE文はいずれも更新系のSQLなので、1つのメソッドに集約されている。
     メソッド名の「update」は、UPDATE文を意味するわけではないので、注意すること。
     使用法としては、第1引数にSQL文を指定し、第2引数以降にパラメータの値を指定すること。
@@ -851,9 +851,9 @@ DBUnitを使用する場合の\ ``Repository``\ のテストクラス作成方�
         | ファイルフォーマットはテストセットアップ用データファイルと同じである。\ ``assertionMode``\ 属性には、
           以下の値が設定可能である。
 
-        * DEFAULT：全てのテーブルとカラムの一致を比較する
-        * NON_STRICT：期待結果データファイルに存在しないテーブル、カラムが実際のデータベースに存在しても無視する
-        * NON_STRICT_UNORDERED：NON_STRICTモードに加え、行の順序についても無視する
+        * \ ``DEFAULT``\ ：全てのテーブルとカラムの一致を比較する。
+        * \ ``NON_STRICT``\ ：期待結果データファイルに存在しないテーブル、カラムが実際のデータベースに存在しても無視する。
+        * \ ``NON_STRICT_UNORDERED``\ ：\ ``NON_STRICT``\ モードに加え、行の順序についても無視する。
 
 * テストセットアップ用データファイルの作成
 
@@ -1173,10 +1173,6 @@ Serviceテストの実装
 本節は、アプリケーション層の\ ``Controller``\ クラス、\ ``Helper``\ クラス、\ ``Form(Validation)``\ クラスに対する
 テストの作成例を示す。
 
-インジェクションするクラスにモック用のダミークラスを別途用意してもよい。 ダミークラスの作成方法については、本章では説明を割愛する。 ダミークラスを作成せず、モック用ライブラリを使用する方法については、JunitとMockitoを使用したテストを参照されたい。
-
-テスト済みの\ ``Repository``\ クラスを使用し、かつモック化も行いたい場合は、適宜以下に説明する実装方法を 組み合わせて実装されたい。
-
 なお、Viewについては単体テストの対象外とする。
 
 アプリケーション層のテスト対象のコンポーネントを以下に示す。
@@ -1205,14 +1201,14 @@ Controllerの単体テスト
 Springは\ ``Controller``\ クラスをテストするためのサポートクラス
 (\ ``org.springframework.test.web.servlet.setup.MockMvcBuilders``\ など)を用意している。
 これらのクラスを利用することでJUnitから\ ``Controller``\ クラスのメソッドを実行してテストすることができる。
+
 テスト対象の\ ``Controller``\ クラスがテストを実施していないクラスをインジェクションしている場合はモック化すること。
 モック用ライブラリを使用してモック化を行う方法については、\ :ref:`TestingControllerWithMockito`\ を参照されたい。
 
 モックを用いず、テスト済みの\ ``Repository``\ クラス、\ ``Service``\ クラスを使用してテストを行う方法については、
 \ :ref:`TestingControllerWithSpringTest`\ を参照されたい。
 
-なお、テスト済みの依存クラスを使用し、かつモック化も行いたい場合は、適宜以下に説明する実装方法を
-組み合わせて実装されたい。
+なお、テスト済みの依存クラスを使用し、かつモック化も行いたい場合は、適宜以下に説明する実装方法を組み合わせて実装されたい。
 
 
 .. _TestingControllerWithSpringTest:
@@ -1521,46 +1517,46 @@ Controllerテストの実装
 
     * \ ``MockHttpSession``\ を利用したテストメソッドの例
 
-         .. code-block:: java
+     .. code-block:: java
 
-            @Test
-            public void testSession() throws Exception {
+        @Test
+        public void testSession() throws Exception {
 
-                // (1)
-                MockHttpSession mockSession = new MockHttpSession();
-                mockSession.setAttribute("userId", "0001");
+            // (1)
+            MockHttpSession mockSession = new MockHttpSession();
+            mockSession.setAttribute("userId", "0001");
 
-                // (2)
-                MockHttpServletRequestBuilder getRequest = MockMvcRequestBuilders.get(
-                    "/checkSession").session(mockSession);
+            // (2)
+            MockHttpServletRequestBuilder getRequest = MockMvcRequestBuilders.get(
+                "/checkSession").session(mockSession);
 
-                // (3)
-                ResultActions results = mockMvc.perform(getRequest);
-                
-                // (4)
-                results1.andExpect(request().sessionAttribute("userId", equalTo("0001")));
-                
-                // omitted
-            }
+            // (3)
+            ResultActions results = mockMvc.perform(getRequest);
+            
+            // (4)
+            results1.andExpect(request().sessionAttribute("userId", equalTo("0001")));
+            
+            // omitted
+        }
 
-         .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
-         .. list-table::
-             :header-rows: 1
-             :widths: 10 90
+     .. tabularcolumns:: |p{0.10\linewidth}|p{0.90\linewidth}|
+     .. list-table::
+         :header-rows: 1
+         :widths: 10 90
 
-             * - 項番
-               - 説明
-             * - | (1)
-               - | セッションのモックを生成し、オブジェクトを格納する。
-             * - | (2)
-               - | セッションを登録したリクエストのモックを生成する。
-                 | \ ``org.springframework.test.web.servlet.request.MockMvcRequestBuilders``\ の\ ``get``\ メソッドで
-                   リクエストのモックを生成し、生成したリクエストに\ ``session``\ メソッドでセッションのモックを登録する。
-                 | 例では\ ``/checkSession``\へのGETリクエストにセッションのモックを登録している。
-             * - | (3)
-               - | \ ``MockMvc``\ にリクエストを渡してコントローラのメソッドを実行する。
-             * - | (4)
-               - | セッションに格納されていることを確認する。
+         * - 項番
+           - 説明
+         * - | (1)
+           - | セッションのモックを生成し、オブジェクトを格納する。
+         * - | (2)
+           - | セッションを登録したリクエストのモックを生成する。
+             | \ ``org.springframework.test.web.servlet.request.MockMvcRequestBuilders``\ の\ ``get``\ メソッドで
+               リクエストのモックを生成し、生成したリクエストに\ ``session``\ メソッドでセッションのモックを登録する。
+             | 例では\ ``/checkSession``\へのGETリクエストにセッションのモックを登録している。
+         * - | (3)
+           - | \ ``MockMvc``\ にリクエストを渡してコントローラのメソッドを実行する。
+         * - | (4)
+           - | セッションに格納されていることを確認する。
 
 |
 
@@ -1676,7 +1672,7 @@ Validator(Bean Validation)テストの実装
     * - | (3)
       - | \ ``size``\ メソッドを使って入力チェックエラーの数を取得し、エラーが発生したかどうかを確認する。
         | エラーがない場合は0が返ってくる。
-          今回は半角チェックのアノテーションのみテストを行っているため、エラーがある場合は1が返ってくる。
+          今回は試験対象のJavaBeanクラスに対して全角カタカナチェックのアノテーションのみ付与しているため、エラーがある場合は1が返ってくる。
     * - | (4)
       - | 試験対象の\ ``Validator``\ を使用したJavaBeanクラスを、テストクラスの内部クラスとして作成している。
 
@@ -1721,7 +1717,6 @@ Validator(Spring Validation)テストの実装
 
             ticketSearchForm = new TicketSearchForm();
 
-            // (1)
             result = new DirectFieldBindingResult(ticketSearchForm, "TicketSearchForm");
         }
 
@@ -1730,10 +1725,10 @@ Validator(Spring Validation)テストの実装
 
             // omitted
 
-            // (2)
+            // (1)
             validator.validate(ticketSearchForm, result);
 
-            // (3)
+            // (2)
             assertEquals(result.hasErrors(), false);
         }
     }
@@ -1746,11 +1741,10 @@ Validator(Spring Validation)テストの実装
     * - 項番
       - 説明
     * - | (1)
-      - | 入力チェック結果を格納する\ ``BindingResult``\ クラスをインスタンス化する。
+      - | \ ``validate``\ メソッドの引数に、\ ``Form``\ クラスのオブジェクトと、
+          \ ``BindingResult``\ クラスのオブジェクトを指定することで、
+          \ ``Form``\ クラスのオブジェクトに対する入力チェックの結果が、
+          \ ``BindingResult``\ クラスのオブジェクトに格納される。
     * - | (2)
-      - | \ ``Validate``\ メソッドを使い、入力チェックを行う。
-        | \ ``Validate``\ メソッドの引数に入力チェックを行うFormクラスと、
-          入力チェック結果を格納する\ ``BindingResult``\ クラスのインスタンスを指定する。
-    * - | (3)
       - | \ ``hasErrors``\ メソッドを使って、エラーの有無を判定する。
         | エラーがある場合はtrueが返り値として返り、エラーがない場合はfalseが返り値として返る。
