@@ -150,6 +150,8 @@ mavenでJUnitを実行する場合は、対象プロジェクト配下に移動�
 \ ``pom.xml``\ に設定を追加することで、テスト対象のファイルを変更することができる。
 また、テストファイルの除外についても設定することが可能である。
 
+* \ ``pom.xml``\
+
 .. code-block:: xml
 
     <project>
@@ -164,10 +166,10 @@ mavenでJUnitを実行する場合は、対象プロジェクト配下に移動�
             <version>2.20.1</version>
             <configuration>
               <includes>
-                <include>*Sample.java</include> <!-- (1) -->
+                <include>*ServiceCheck.java</include> <!-- (1) -->
               </includes>
               <excludes>
-                <exclude>TestSample.java</exclude> <!-- (2) -->
+                <exclude>AccountServiceCheck.java</exclude> <!-- (2) -->
               </excludes>
             </configuration>
           </plugin>
