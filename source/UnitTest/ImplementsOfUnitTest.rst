@@ -17,7 +17,7 @@ Overview
 
 最初に、単体テストの実装で使用するOSSライブラリ構成を提示する。
 次に、単体テストを実行するために共通して必要となるテストデータのセットアップ方法について説明し、
-最後に、各レイヤー毎のテスト実装例を説明する。
+最後に、各レイヤ毎のテスト実装例を説明する。
 
 なお、OSSライブラリ構成および実装例として記載しているサンプルは一例である。
 実際に採用される際には、業務要件に従って検討していただきたい。
@@ -31,46 +31,47 @@ Overview
     :header-rows: 1
     :widths: 20 20 25 35
 
-    * - レイヤー
+    * - レイヤ
       - テスト対象
       - テスト方法
       - 詳細
     * - インフラストラクチャ層
       - Repository
       - Junit + spring-test
-      - データアクセスにSpring JDBCを使用する場合
+      - データアクセスにSpring JDBCを使用する
     * - 
       - 
-      - Junit + spring-test + DBUnit + spring-test-dbunit
-      - データアクセスにDBUnitを使用する場合
+      - | Junit + spring-test + DBUnit
+        | + spring-test-dbunit
+      - データアクセスにDBUnitを使用する
     * - ドメイン層
       - Service + 依存クラス
       - Junit + spring-test
-      - Serviceが依存するクラスを使用できる場合 トランザクション境界を確認する
+      - Serviceが依存するクラスを使用する
     * - 
       - Service
       - Junit + Mockito
-      - Serviceが依存するクラスをモック化する場合
+      - Serviceが依存するクラスをモック化して使用する
     * - アプリケーション層
       - Controller + 依存クラス
       - Junit + spring-test + MockMVC
-      - Controllerが依存するクラスを使用できる場合
+      - Controllerが依存するクラスを使用する
     * - 
       - Controller
       - JUnit + MockMVC + Mockito
-      - Controllerが依存するクラスをモック化する場合
+      - Controllerが依存するクラスをモック化して使用する
     * - 
       - Helper
       - Junit + spring-test (+ DBUnit)
-      - Helperが依存するクラスを使用できる場合
+      - Helperが依存するクラスを使用する
     * - 
       - Validation
       - JUnit
-      - Bean Validationを使用する場合
+      - Bean Validationを使用する
     * - 
       - 
       - JUnit
-      - Spring Validationを使用する場合
+      - Spring Validationを使用する
 
 |
 
@@ -81,8 +82,9 @@ OSSのバージョン★
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 単体テストで利用するOSS一覧を以下に示す。
-なお、本章では全ての機能を網羅しているわけではないため、使用するOSSはあくまで1例である。
-また、サンプルを動作させるために利用するOSS一覧については、\ :ref:`frameworkstack_using_oss_version`\ を参照されたい。
+なお、単体テスト章では全ての機能のテストを網羅しているわけではないため、使用するOSSはあくまで一例である。
+また、本章内のコードを動作させるために利用するOSS一覧については、\ :ref:`frameworkstack_using_oss_version`\
+を参照されたい。
 
 .. tabularcolumns:: |p{0.15\linewidth}|p{0.27\linewidth}|p{0.25\linewidth}|p{0.15\linewidth}|p{0.13\linewidth}|
 .. list-table::
@@ -184,12 +186,12 @@ OSSのバージョン★
 
 テストを実施するにあたり、データストアにデータベースを使用する場合、テスト用のデータベースのセットアップが必要になる。
 
-テストで使用するテーブルを初期化する場合は、テスト用に作成したコンテキストに\ ``<jdbc:initialize-database>``\ を
+テストで使用するテーブルを初期化する場合は、テスト用に作成した設定ファイルに\ ``<jdbc:initialize-database>``\ を
 定義することでテスト実行時にデータベースを初期化するためのSQL(DDLとDML)を発行することができる。
-なお、\ ``<jdbc:initialize-database>``\ を使用して作成したテーブルと初期化データは実行後にコミットされるため、
-テスト終了後もデータベースの状態は戻らないことに注意されたい。
+なお、\ ``<jdbc:initialize-database>``\ を使用して作成したテーブルと初期化データは設定ファイル読み込み後に
+コミットされるため、テスト終了後もデータベースの状態は戻らないことに注意されたい。
 
-設定例を以下に示す。
+テストデータセットアップの設定方法を以下に示す。
 
 * ``test-context.xml``
 
@@ -210,7 +212,7 @@ OSSのバージョン★
 
   <!-- (2) -->
   <jdbc:initialize-database data-source="dataSource">
-    <jdbc:script location="classpath*:/META-INF/sql/test-schema.sql" />
+    <jdbc:script location="classpath*:/META-INF/sql/test-schema.sql" encoding="UTF-8" />
   </jdbc:initialize-database>
 
   <!-- omitted -->
@@ -225,10 +227,11 @@ OSSのバージョン★
     * - | (1)
       - | データソースの実装クラスを指定する。
           例では、Apache Commons DBCPから提供されているデータソースクラス
-          (\ ``org.apache.commons.dbcp2.BasicDataSource``\ )を指定する。
+          (\ ``org.apache.commons.dbcp2.BasicDataSource``\ )を指定している。
     * - | (2)
-      - | 実行するSQLスクリプトの場所をscriptタグの\ ``location``\ 、SQLスクリプトファイルの文字コードを\ ``encoding``\ 
-          に指定する。テスト共通データがある場合、テスト共通データ挿入用のDML文を指定することも可能である。
+      - | 実行するSQLスクリプトの場所を\ ``<jdbc:script>``\ タグの\ ``location``\ 属性、SQLスクリプトファイルの
+          文字コードを\ ``encoding``\ 属性に指定する。
+        | テスト共通データがある場合、テスト共通データ挿入用のDML文を指定することも可能である。
 
 
 * ``RouteRepositoryTest.java``
@@ -251,11 +254,12 @@ OSSのバージョン★
     * - 項番
       - 説明
     * - | (1)
-      - | \ ``@RunWith``\ に\ ``SpringJUnit4ClassRunner``\ を指定することによって、Spring固有のアノテーションを
-          テストクラスで利用できる。
+      - | \ ``@RunWith``\ に\ ``org.springframework.test.context.junit4.SpringJUnit4ClassRunner``\
+          を指定することによって、Spring固有のアノテーションをテストクラスで利用できる。
     * - | (2)
       - | \ ``@ContextConfiguration``\ アノテーションにテスト用の設定ファイルを指定することによって、テストを行う際は
-          テスト用の設定ファイルを読み込むようにできる。classpathを指定することによって、resource直下を参照できる。
+          テスト用の設定ファイルを読み込むようにできる。\ ``classpath``\ を指定することによって\  ``resource``\ 直下
+          を参照できる。
 
 .. warning::
 
@@ -799,8 +803,8 @@ DBUnitを使用する場合の\ ``Repository``\ のテストクラス作成方�
       - |  \ ``DependencyInjectionTestExecutionListener``\ は、テストインスタンスのDI機能を提供する。
     * - | (4)
       - | \ ``DirtiesContextTestExecutionListener``\ は、\ ``@DirtiesContext``\ アノテーションを処理する機能を
-          提供する。\ ``@DirtiesContext``\ は、コンテキストのキャッシュを破棄、リロードする機能を提供する。
-          詳細は、\ `@DirtiesContext <https://docs.spring.io/spring/docs/current/spring-framework-reference/html/integration-testing.html#__dirtiescontext>`_\
+          提供する。\ ``@DirtiesContext``\ は、アプリケーションコンテキストのキャッシュを破棄、リロードする機能を
+          提供する。詳細は、\ `@DirtiesContext <https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#dirtiescontext>`_\
           を参照されたい。
     * - | (5)
       - | \ ``TransactionDbUnitTestExecutionListener``\ は、同一トランザクション内でBUnitによるデータセットアップや
